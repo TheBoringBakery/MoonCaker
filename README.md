@@ -3,6 +3,22 @@
 # Purpose
 Help noob players advence in their learning of drafting through personalized suggestions. Learn their weaknesses and strenghts.
 
+# Usage
+To run the dataCrawler.py, basic usage is:
+```bash
+pip install -r requirements.txt
+python dataCrawler.py [--API-file API_FILE] [--API API]
+```
+Usage with a virtual environment (linux):
+```bash
+pip install virtualenv
+python -m venv env
+source ./env
+pip install -r requirements.txt
+python dataCrawler.py [--API-file API_FILE] [--API API]
+```
+Note that either the '--API-file' or the '--API' argument must be provided in order for the program to work
+
 # Roadmap
 1. Language: Python
 1. Decide ML method
