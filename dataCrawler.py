@@ -41,6 +41,11 @@ def account_info(lw, region, mode, tier, division):
 		accounts.append({'summonerName': names[i, 0], 'summonerId': names[i, 1], 'accountId': ids[i]})		
 	return accounts
 
+def start_crawling(API_KEY):
+	lol_watcher = LolWatcher(API_KEY)
+	accounts = account_info(lol_watcher, 'euw1', 'RANKED_SOLO_5x5', 'DIAMOND', 'I') #still to remove accounts with None values :)
+	clashMatchLists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts])
+	#TODO: crawl some data
 
 def main():
 	#parse arguments in order to get the riot API
@@ -52,7 +57,7 @@ def main():
 	if args['API'] is None and args['API_file'] is None:
 		print("You must either provide the API through the command line or through a file")
 		parser.print_help()
-		exit()
+		return
 	
 	RIOT_API_KEY = ""
 	if not args['API'] is None:
@@ -64,11 +69,9 @@ def main():
 				RIOT_API_KEY = file.readline()
 		except FileNotFoundError:
 			print("Couldn't find the specified file with the RIOT API key, please check again")
-			exit()
-			
-	lol_watcher = LolWatcher(RIOT_API_KEY)
-	accounts = account_info(lol_watcher, 'euw1', 'RANKED_SOLO_5x5', 'DIAMOND', 'I') #still to remove accounts with None values :)
-	clashMatchLists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts])
+			return
+	
+	start_crawling(RIOT_API_KEY)
 
 
 if __name__ == "__main__":
