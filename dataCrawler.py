@@ -1,14 +1,19 @@
+"""
+	Crawls lol data with the APi and stores it in a file
+"""
+
 from riotwatcher import LolWatcher
 import numpy as np
 import argparse
 
+#developer note: shorter function names pls, for the comments us DocString convention <3
 
-def getSummonersIdAndNameByLeague(lw, region,mode,tier,division):
-	playersList= lw.league.entries(region,mode,tier,division)
-	return np.array([[summoner['summonerName'],summoner['summonerId']] for summoner in playersList])
+def summoner_name_id_from_league(lw, region, mode, tier, division):
+	playersList= lw.league.entries(region, mode, tier, division)
+	return np.array([[summoner['summonerName'], summoner['summonerId']] for summoner in playersList]) #why are we using numpy?
 
 #gets account Ids of given summoners, returning None for accounts not found (che cazzo ne so anche se li ho appena fetchati dalla lega non li trova)
-def getAccountIdsBySummoners(lw, region,summonerNames):
+def account_id_from_summoner_name(lw, region, summonerNames):
 	ids=[]
 	for name in summonerNames:
 		try:
@@ -18,7 +23,7 @@ def getAccountIdsBySummoners(lw, region,summonerNames):
 	return ids
 
 #gets Clash match list for each given accountId, returning None for accounts with no clash games
-def getClashMatchlist(lw, region,accountIds):
+def clash_matches(lw, region, accountIds):
 	matchList=[]
 	for encr_id in accountIds:
 		try:
@@ -28,12 +33,12 @@ def getClashMatchlist(lw, region,accountIds):
 	return matchList
 
 #returns list of account infos: summoner name,summoner Id, account Id
-def getAccountInfo(lw, region,mode,tier,division):
-	names= getSummonersIdAndNameByLeague(lw, region,mode,tier,division)
-	ids= getAccountIdsBySummoners(lw, region,names[:,0])
-	accounts=[]
+def account_info(lw, region, mode, tier, division):
+	names = summoner_name_id_from_league(lw, region, mode, tier, division)
+	ids = account_id_from_summoner_name(lw, region, names[:, 0])
+	accounts = []
 	for i in range(len(ids)): 
-		accounts.append({'summonerName': names[i,0], 'summonerId': names[i,1], 'accountId': ids[i]})		
+		accounts.append({'summonerName': names[i, 0], 'summonerId': names[i, 1], 'accountId': ids[i]})		
 	return accounts
 
 
@@ -62,8 +67,8 @@ def main():
 			exit()
 			
 	lol_watcher = LolWatcher(RIOT_API_KEY)
-	accounts = getAccountInfo(lol_watcher, 'euw1','RANKED_SOLO_5x5', 'DIAMOND', 'I') #still to remove accounts with None values :)
-	clashMatchLists = getClashMatchlist(lol_watcher, 'euw1', [account.get('accountId') for account in accounts])
+	accounts = account_info(lol_watcher, 'euw1', 'RANKED_SOLO_5x5', 'DIAMOND', 'I') #still to remove accounts with None values :)
+	clashMatchLists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts])
 
 
 if __name__ == "__main__":

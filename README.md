@@ -4,6 +4,8 @@
 Help noob players advence in their learning of drafting through personalized suggestions. Learn their weaknesses and strenghts.
 
 ## Usage
+Python version 3.7.x.
+
 To run the dataCrawler.py, basic usage is:
 ```bash
 pip install -r requirements.txt
@@ -18,6 +20,9 @@ pip install -r requirements.txt
 python dataCrawler.py [--API-file API_FILE] [--API API]
 ```
 Note that either the '--API-file' or the '--API' argument must be provided in order for the program to work
+
+## API usage
+We will need to use the API to get the summoner ID, from which will take the clash games and match details (team comp, winner, time). From the summoner we will also take the masteries and the champion stats. 
 
 ## Resources
 Following are some data-set that might help for prototyping:
