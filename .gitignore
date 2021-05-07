@@ -156,3 +156,7 @@ Thumbs.db
 
 # profiling data
 .prof
+
+node_modules
+
+clash-app 

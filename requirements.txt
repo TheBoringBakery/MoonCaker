@@ -1,3 +1,0 @@
-riotwatcher==3.1.1
-Flask==1.1.2
-numpy==1.20.2
