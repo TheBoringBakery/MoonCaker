@@ -1,0 +1,70 @@
+WindowManager:
+    WelcomeWindow:
+    ClashWindow:
+
+<WelcomeWindow>:
+    name: "welcome"
+
+    FloatLayout:
+        size: root.width, root.height
+
+        Label:
+            text: "Nothing to do here, right now..."
+            text_size: root.width, None
+            # size: self.texture_size
+            halign: 'center'
+            valign: 'top'
+            # pos_hint: {'x': .5}
+            # size_hint: .5, .5
+
+        # GridLayout:
+        #     # rows: 2
+        #     size_hint: 0.5, 0.5
+        #     pos_hint: {'bottom': 0, 'y': .25}
+            
+
+        Button:
+            text: "Simulate clash starting"
+            pos_hint: {'y': .2, 'x': 0.35}
+            size_hint: .3, .15
+            on_release:
+                app.root.current = "clash"
+
+                # pos_hint: {'top': .5}
+                # size_hint: 1, .5
+
+<ChampionImage>:
+
+
+<RowLayout>:
+    cols: 3
+    size_hint: 1, 0.2
+    # orientation: 'lr-tb'
+    ChampionImage:
+        source: "lol_assets/3457.png"
+        # size: self.texture_size 
+        text: "First summoner"
+        size_hint: None, 1
+    ChampionImage:
+        source: "lol_assets/1_B1.jpg"
+        # size: self.texture_size 
+        text: "First summoner"
+        size_hint: None, 1
+    Label:
+        size: self.texture_size 
+        text: "Summoner Name"
+        bold: True
+        font_size: 24
+        size_hint: None, 1
+
+<ClashWindow>:
+    name: "clash"
+    BoxLayout:
+        orientation: 'vertical'
+        size: root.width, root.height
+
+        RowLayout:
+        RowLayout:
+        RowLayout:
+        RowLayout:
+        RowLayout:
