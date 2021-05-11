@@ -218,7 +218,7 @@ def start_crawling(API_KEY, get_key):
 				accounts = account_info(lol_watcher, region, 'RANKED_SOLO_5x5', tier, division, get_key)
 				match_lists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts], get_key)
 				match_list = cln_match(match_lists, db_matches)
-				add_new_matches(lol_watcher, match_list, db_matches, region, get_key())
+				add_new_matches(lol_watcher, match_list, db_matches, region, get_key)
 			
 def main():
 	#parse arguments in order to get the riot API
