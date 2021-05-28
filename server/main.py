@@ -2,7 +2,7 @@
     Flask server that will run the data crawler and provide the RESTful API
 """
 
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, redirect
 from flask_restful import Resource, Api
 from flask_mail import Mail, Message
 from threading import RLock, Condition
@@ -51,7 +51,7 @@ api.add_resource(DownloadLog, '/get_log')
 
 @app.route('/')
 def hello_world():
-    return 'Hello, World!'
+    return redirect("https://mooncaker.theboringbakery.com", code=302)
 
 @app.route('/send_suggestion/')
 def send_suggestion():
