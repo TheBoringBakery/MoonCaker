@@ -8,7 +8,7 @@ import argparse
 import numpy as np
 import time
 from pymongo import MongoClient
-
+import logging
 
 def sum_name_id(lw, region, mode, tier, division, get_key):
     """
@@ -150,15 +150,14 @@ def cln_match(match_lists, db_matches):
     game_ids = [match.get('gameId') for match in match_list]
     game_ids = list(dict.fromkeys(game_ids))
     for g_id in game_ids:
-        if db_matches.count_documents(
-                {"gameId": g_id}) > 0:  # Collection.find({}).count() is much faster but deprecated :(
+        if db_matches.count_documents({"gameId": g_id}) > 0:  
             game_ids.remove(g_id)
     return game_ids
 
 
 def check_jungler(player):
     spells = [player["spell1Id"], player["spell2Id"]]
-    return 11 in spells  # 11 is flash
+    return 11 in spells  # 11 is smite #todo (low): remove hardcoded value
 
 
 def get_role(pos, player):
@@ -166,7 +165,7 @@ def get_role(pos, player):
         return "JUNGLE"
     x = pos["x"]
     y = pos["y"]
-    if x > 3500 and y < 3500 or x > 11000 and y < 11000:
+    if x > 3500 and y < 3500 or x > 11000 and y < 11000: #todo (very low): can remove the hardcoded values? 
         return "BOT"
     if x < 3500 and y > 3500 or x < 11000 and y > 11000:
         return "TOP"
@@ -197,14 +196,17 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
             match = lw.match.by_id(region, g_id)
             m2_frame = lw.match.timeline_by_match(region, g_id)['frames'][2]['participantFrames']
             m_last_frame = lw.match.timeline_by_match(region, g_id)['frames'][-1]['participantFrames']
-            redo = False
+            redo = False #variable not used?
         except ApiError as err:
             if err.response.status_code == 404:
+                logging.warning(f"Received a 404 status code when retrieving {g_id} game id")
                 match_list.append(None)
                 redo = False
             elif err.response.status_code == 403:
+                logging.warning(f"Received a 403 status code, waiting new API")
                 lw._base_api._api_key = get_key()
             elif err.response.status_code == 429:
+				#todo (medium): when does this happen ?? Todo: add log to this branch
                 time.sleep(60)
             else:
                 raise
@@ -246,13 +248,14 @@ def start_crawling(API_KEY, get_key):
     REGIONS = ['euw1', 'eun1', 'kr', 'na1']
     TIERS = ['DIAMOND', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'IRON']
     DIVISIONS = ['I', 'II', 'III', 'IV', 'V']
-    cluster = MongoClient('mongodb://localhost:27017/') #"mongodb+srv://mortorit:<PASSWORD>@mooncaker0.lzfme.mongodb.net/Mooncaker0?retryWrites=true&w=majority")
+    cluster = MongoClient('mongodb://localhost:27017/') 
     db = cluster["mooncaker"]
     db_matches = db["matches"]
     lol_watcher = LolWatcher(API_KEY)
     for region in REGIONS:
         for tier in TIERS:
             for division in DIVISIONS:
+                logging.info(f"Crawling {region}, {tier}, {division}")
                 accounts = account_info(lol_watcher, region, 'RANKED_SOLO_5x5', tier, division, get_key)
                 match_lists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts],
                                             get_key)
@@ -283,8 +286,7 @@ def main():
         except FileNotFoundError:
             print("Couldn't find the specified file with the RIOT API key, please check again")
             return
-    get_key = lambda: input()  # why not pass directly input instead of lambda? I'm noob I don't understand
-    start_crawling(RIOT_API_KEY, get_key)
+    start_crawling(RIOT_API_KEY, input)
 
 
 if __name__ == "__main__":
