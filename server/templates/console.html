@@ -1,0 +1,17 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+Admin Console
+{% endblock %}
+{% block content %}
+<h1 style="text-align: center">Admin Console</h1>
+<div class="container">
+    <form method="POST" action="#">
+       <dl>
+       {{ wtf.quick_form(form)}}
+        </dl>
+    </form>
+    <p>{{ response | safe }}</p>
+</div>
+{% endblock %}
