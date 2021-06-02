@@ -1,74 +1,24 @@
-"""
-    Flask server that will run the data crawler and provide the RESTful API
-"""
-
-from flask import Flask, request, send_file, redirect, session, render_template, url_for, jsonify, g
-from flask_restful import Resource, Api
-from flask_mail import Mail, Message
-from flask_wtf import FlaskForm 
-from flask_bootstrap import Bootstrap
-from wtforms import StringField, PasswordField
-from wtforms.validators import InputRequired, Email, Length
-from threading import RLock, Condition
-from dotenv import load_dotenv
+from flask import  request, send_file, redirect, session, render_template, url_for, g
+from flask_restful import Resource
+from flask_mail import Message
 from os import getcwd, path, environ
 import hashlib
 import logging
-
-
-
-app = Flask(__name__)
-api = Api(app)
-
-
-#load environment variables from file .env 
-load_dotenv()
-if environ['variables-are-set'] == '0':
-    print("You need to edit the .env file before you can run this application")
-    raise NotImplementedError
-app.config['MAIL_PORT'] = 465
-app.config['MAIL_USE_TLS'] = False
-app.config['MAIL_USE_SSL'] = True
-try:
-    app.config['MAIL_SERVER'] = environ['mail-server']
-    app.config['MAIL_USERNAME'] = environ['mail-user']
-    app.config['MAIL_PASSWORD'] = environ['mail-pass']
-    app.config['SECRET_KEY'] = environ['secret-key']
-    app.config['SALT'] = environ['hash-salt'].encode('latin1').decode('unicode-escape').encode('latin1')
-    app.config['ADMIN-USER'] = environ['admin-user']
-    app.config['ADMIN-PASS'] = environ['admin-hashed-pass'].encode('latin1').decode('unicode-escape').encode('latin1')
-except KeyError:
-    print("The .env file was improperly set, please check the README for further information")
-mail = Mail(app)
-Bootstrap(app)
-
-api_lock = RLock()
-api_condition = Condition(api_lock)
-API_KEY = ""
-LOG_FILENAME = "mooncaker.log"
-
-class AdminForm(FlaskForm):
-	username = StringField('Username', validators=[InputRequired()])
-	password = PasswordField('Password', validators=[InputRequired(), Length(min=5, max=32)])
-
-class ConsoleForm(FlaskForm):
-	command = StringField('Command', validators=[InputRequired()])
+from mooncaker.forms import AdminForm, ConsoleForm
+from mooncaker import app, mail, api_lock, api_condition
 
 # set REST API
 # @deprecated
-class ApiKeyUpdate(Resource):
-    def put(self):
-        global API_KEY
-        with api_lock:
-            API_KEY = request.form['data']
-            logging.info("Received a new API key")
-            api_condition.notify()
+# class ApiKeyUpdate(Resource):
+#     def put(self):
+#         global API_KEY
+#         with api_lock:
+#             API_KEY = request.form['data']
+#             logging.info("Received a new API key")
+#             api_condition.notify()
         
-        return {"result": "ok"}
-# @depracated
-class DownloadLog(Resource):
-    def get(self):
-        return send_file(path.join(getcwd(), LOG_FILENAME), download_name=LOG_FILENAME)
+#         return {"result": "ok"}
+
 
 # api.add_resource(ApiKeyUpdate, '/set_api_key') #deprecated
 # api.add_resource(DownloadLog, '/get_log') #deprecated
@@ -100,10 +50,10 @@ def admin():
     form = AdminForm()
     if form.validate_on_submit():
         session.pop('user', None)
-        if form.username.data == app.config['ADMIN-USER']:
+        if form.username.data == app.config['ADMIN_USER']:
             unhashed_password = form.password.data
             hashed_password = hashlib.pbkdf2_hmac('sha256', unhashed_password.encode('utf-8'), app.config['SALT'], 100000)
-            if hashed_password == app.config['ADMIN-PASS']:
+            if hashed_password == app.config['ADMIN_PASS']:
                 session['user'] = form.username.data
                 return redirect(url_for('console'))
             else:
@@ -122,7 +72,7 @@ def parse_command(command, args):
             api_condition.notify()
         return "New API key set correctly"
     elif command == "get-log":
-        with open(path.join(getcwd(), LOG_FILENAME)) as logfile:
+        with open(path.join(getcwd(), app.config['LOG_FILENAME'])) as logfile:
             return "<br>".join(logfile.readlines())
     elif command == "help":
         return "Currently available commands are: <br> set-api-key [key] <br> get-log <br>"
@@ -157,11 +107,3 @@ def block_until_new_key():
             logging.debug("Stopping thread until new API KEY is provided")
             api_condition.wait()
     return API_KEY
-
-if __name__ == "__main__":
-    from dataCrawler import start_crawling
-    
-    logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
-    logging.info('Server has started from main')
-    app.run(host="0.0.0.0", debug=True)
-    # start_crawling(API_KEY, block_until_new_key)
