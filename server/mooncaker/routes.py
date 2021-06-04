@@ -79,12 +79,12 @@ def parse_command(command, args):
 def console():
     if g.user is not None:
         form = ConsoleForm()
-        string_back = ""
+        string_back = parse_command("help", [])
         if form.validate_on_submit():
             string_back = 'Something when wrong parsing your command. Please report to the admins' #string to send back
             command = str(form.command.data).split()[0].lower()
             args = str(form.command.data).split()[1:] #remove first command
             string_back = parse_command(command, args)
             string_back += "<br>"
-        return render_template('console.html', form=form, response=parse_command("help", []))
+        return render_template('console.html', form=form, response=string_back)
     return redirect(url_for('admin'))
