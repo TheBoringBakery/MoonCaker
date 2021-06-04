@@ -4,7 +4,8 @@ from flask_bootstrap import Bootstrap
 from flask_mail import Mail
 from dotenv import load_dotenv
 from os import environ
-from threading import RLock, Condition
+from multiprocessing import Process, Queue
+from mooncaker.external_tools.dataCrawler import start_crawling
 import logging
 
 app = Flask(__name__)
@@ -14,7 +15,7 @@ api = Api(app)
 LOG_FILENAME = "mooncaker.log"
 app.config['LOG_FILENAME'] = LOG_FILENAME
 logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
-logging.info('Server has started from main')
+logging.info('mooncaker: Server has started from main')
 
 #load environment variables from file .env 
 load_dotenv()
@@ -36,8 +37,12 @@ except KeyError:
 mail = Mail(app)
 Bootstrap(app)
 
-api_lock = RLock()
-api_condition = Condition(api_lock)
-API_KEY = ""
+api_key_queue = Queue(maxsize=1)
+DUMMY_API_KEY = "RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" #this key DOESN'T work but it's needed to start the process. 
+#TODO (low): can we avoid using the above key ? 
+
+crawling_process = Process(target=start_crawling, args=(DUMMY_API_KEY, api_key_queue.get, ))
+crawling_process.start()
+logging.info("mooncaker: starting datacrawling")
 
 from mooncaker import routes

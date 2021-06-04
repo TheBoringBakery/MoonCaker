@@ -31,8 +31,9 @@ def sum_name_id(lw, region, mode, tier, division, get_key):
         try:
             players_list = lw.league.entries(region, mode, tier, division)
             redo = False
-        except ApiError as err:
+        except ApiError as err: #todo (medium): this error handling is repeated 3+ time can we make it modular? 
             if err.response.status_code == 403:
+                logging.warning(f"datacrawler: Received a 403 status code, waiting new API")
                 lw._base_api._api_key = get_key()
             elif err.response.status_code == 429:
                 time.sleep(60)
@@ -67,6 +68,7 @@ def acc_id_by_sum_name(lw, region, summoner_names, get_key):
                     ids.append(None)
                     redo = False
                 elif err.response.status_code == 403:
+                    logging.warning(f"datacrawler: Received a 403 status code, waiting new API")
                     lw._base_api._api_key = get_key()
                 elif err.response.status_code == 429:
                     time.sleep(60)
@@ -101,6 +103,7 @@ def clash_matches(lw, region, accountIds, get_key):
                     match_list.append(None)
                     redo = False
                 elif err.response.status_code == 403:
+                    logging.warning(f"datacrawler: Received a 403 status code, waiting new API")
                     lw._base_api._api_key = get_key()
                 elif err.response.status_code == 429:
                     time.sleep(60)
@@ -199,11 +202,11 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
             redo = False #variable not used?
         except ApiError as err:
             if err.response.status_code == 404:
-                logging.warning(f"Received a 404 status code when retrieving {g_id} game id")
+                logging.warning(f"datacrawler: Received a 404 status code when retrieving {g_id} game id")
                 match_list.append(None)
                 redo = False
             elif err.response.status_code == 403:
-                logging.warning(f"Received a 403 status code, waiting new API")
+                logging.warning(f"datacrawler: Received a 403 status code, waiting new API")
                 lw._base_api._api_key = get_key()
             elif err.response.status_code == 429:
 				#todo (medium): when does this happen ?? Todo: add log to this branch
@@ -255,7 +258,7 @@ def start_crawling(API_KEY, get_key):
     for region in REGIONS:
         for tier in TIERS:
             for division in DIVISIONS:
-                logging.info(f"Crawling {region}, {tier}, {division}")
+                logging.info(f"datacrawler: Crawling {region}, {tier}, {division}")
                 accounts = account_info(lol_watcher, region, 'RANKED_SOLO_5x5', tier, division, get_key)
                 match_lists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts],
                                             get_key)

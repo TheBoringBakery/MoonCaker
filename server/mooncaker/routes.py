@@ -1,11 +1,11 @@
-from flask import  request, send_file, redirect, session, render_template, url_for, g
+from flask import  redirect, session, render_template, url_for, g
 from flask_restful import Resource
 from flask_mail import Message
 from os import getcwd, path, environ
 import hashlib
 import logging
 from mooncaker.forms import AdminForm, ConsoleForm
-from mooncaker import app, mail, api_lock, api_condition
+from mooncaker import app, mail, api_key_queue
 
 # set REST API
 # @deprecated
@@ -65,12 +65,9 @@ def admin():
 
 def parse_command(command, args):
     if command == "set-api-key":
-        global API_KEY
-        with api_lock:
-            API_KEY = args[0]
-            logging.info("Received a new API key")
-            api_condition.notify()
-        return "New API key set correctly"
+        api_key_queue.put(args[0])
+        logging.info("mooncaker: Received a new API key")
+        return 'New API key set correctly'
     elif command == "get-log":
         with open(path.join(getcwd(), app.config['LOG_FILENAME'])) as logfile:
             return "<br>".join(logfile.readlines())
@@ -91,19 +88,3 @@ def console():
             string_back += "<br>"
         return render_template('console.html', form=form, response=parse_command("help", []))
     return redirect(url_for('admin'))
-
-
-def block_until_new_key():
-    """
-        This gets called once the API key expires, it will block until a new API key is sent to the server
-
-        Returns:
-            str: The new API key
-    """
-    global API_KEY
-    with api_lock:
-        API_KEY = ""
-        while not API_KEY:
-            logging.debug("Stopping thread until new API KEY is provided")
-            api_condition.wait()
-    return API_KEY
