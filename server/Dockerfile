@@ -7,9 +7,15 @@ ADD . /
 
 RUN chmod +x /start.sh
 
+RUN chmod +x /install_db.sh
+
+RUN /install_db.sh
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 80
+
+EXPOSE 465
 
 # WORKDIR /mooncaker
 
