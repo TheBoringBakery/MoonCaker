@@ -5,7 +5,6 @@ flask_bootstrap==3.3.7.1
 flask_mail==0.9.1
 flask_restful==0.3.9
 flask_wtf==0.15.1
-numpy==1.20.3
 pymongo==3.11.4
 python-dotenv==0.17.1
 riotwatcher==3.1.1

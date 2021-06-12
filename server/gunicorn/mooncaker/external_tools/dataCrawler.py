@@ -5,10 +5,8 @@
 from riotwatcher import LolWatcher, ApiError
 from pymongo import MongoClient
 import argparse
-import numpy as np
 import re
 import time
-from pymongo import MongoClient
 import logging
 
 
@@ -41,7 +39,7 @@ def sum_name_id(lw, region, mode, tier, division, get_key):
                 time.sleep(60)
             else:
                 raise
-    return np.array([[summoner.get('summonerName'), summoner.get('summonerId')] for summoner in players_list])
+    return [summoner.get('summonerName') for summoner in players_list], [summoner.get('summonerId') for summoner in players_list]
 
 
 # gets account Ids of given summoners, returning None for accounts not found (che cazzo ne so anche se li ho appena fetchati dalla lega non li trova)
@@ -130,12 +128,12 @@ def account_info(lw, region, mode, tier, division, get_key):
         Returns:
         List[Dict]: list of players' summoner name, summonerId, accountId belonging to the given tier,division,region
     """
-    names = sum_name_id(lw, region, mode, tier, division, get_key)
-    ids = acc_id_by_sum_name(lw, region, names[:, 0], get_key)
+    names, sum_ids = sum_name_id(lw, region, mode, tier, division, get_key)
+    acc_ids = acc_id_by_sum_name(lw, region, names, get_key)
     accounts = []
-    for i in range(len(ids)):
-        if not ids[i] is None:
-            accounts.append({'summonerName': names[i, 0], 'summonerId': names[i, 1], 'accountId': ids[i]})
+    for i in range(len(acc_ids)):
+        if not acc_ids[i] is None:
+            accounts.append({'summonerName': names[i], 'summonerId': sum_ids[i], 'accountId': acc_ids[i]})
     return accounts
 
 
