@@ -1,0 +1,20 @@
+version: '3.3'
+
+services:
+    gunicorn:
+        build: ./gunicorn
+        expose:
+            - 5000
+        ports: 
+            - 465:465
+
+    nginx:
+        build: ./nginx
+        ports:
+            - 80:80
+            - 443:443
+        depends_on:
+            - gunicorn
+
+
+

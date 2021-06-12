@@ -2,14 +2,17 @@ from flask import Flask
 from flask_restful import Api
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
+# from flask_talisman import Talisman
 from dotenv import load_dotenv
 from os import environ
 from multiprocessing import Process, Queue
 from mooncaker.external_tools.dataCrawler import start_crawling
 import logging
 
+
 app = Flask(__name__)
 api = Api(app)
+# Talisman(app)
 
 
 LOG_FILENAME = "mooncaker.log"

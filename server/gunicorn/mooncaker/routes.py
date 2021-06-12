@@ -1,4 +1,4 @@
-from flask import  redirect, session, render_template, url_for, g
+from flask import  redirect, session, render_template, url_for, g, request
 from flask_restful import Resource
 from flask_mail import Message
 from os import getcwd, path, environ
@@ -36,7 +36,7 @@ def hello_world():
 @app.route('/send_suggestion/', methods=['POST'])
 def send_suggestion():
     text = "Either this is a test or something went wrong with the parsing of the suggestion, see server log for further information"
-    # todo: parse text from POST request
+    text = str(request.form)
     msg = Message(subject="A suggestion was submitted for Mooncaker!",
                   body=text,
                   sender=environ['mail-user'],
