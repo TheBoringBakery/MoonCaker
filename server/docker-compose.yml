@@ -3,9 +3,8 @@ version: '3.3'
 services:
     gunicorn:
         build: ./gunicorn
-        expose:
-            - 5000
-        ports: 
+        ports:
+            - 5000:5000 
             - 465:465
 
     nginx:
