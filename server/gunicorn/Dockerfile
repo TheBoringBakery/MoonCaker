@@ -7,13 +7,9 @@ ADD . /
 
 RUN chmod +x /start.sh
 
-RUN chmod +x /install_db.sh
-
-RUN /install_db.sh
-
 RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 5000 465
+EXPOSE 5000 587
 
 ENV PYTHONPATH=/mooncaker
 

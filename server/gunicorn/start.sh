@@ -2,6 +2,4 @@
 set -e
 
 # Start Gunicorn
-exec mongod --dbpath /DataCaker/data &
-sleep 10
 exec gunicorn -c "gunicorn.conf.py"

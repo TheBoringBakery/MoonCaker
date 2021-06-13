@@ -2,7 +2,7 @@ from flask import Flask
 from flask_restful import Api
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
-# from flask_talisman import Talisman
+from flask_talisman import Talisman
 from dotenv import load_dotenv
 from os import environ
 from multiprocessing import Process, Queue
@@ -12,7 +12,7 @@ import logging
 
 app = Flask(__name__)
 api = Api(app)
-# Talisman(app)
+# Talisman(app, force_https=False)
 
 
 LOG_FILENAME = "mooncaker.log"
@@ -22,9 +22,9 @@ logging.info('mooncaker: Server has started from main')
 
 #load environment variables from file .env 
 load_dotenv()
-app.config['MAIL_PORT'] = 465
-app.config['MAIL_USE_TLS'] = False
-app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
 try:
     app.config['MAIL_SERVER'] = environ['mail-server']
     app.config['MAIL_USERNAME'] = environ['mail-user']

@@ -42,7 +42,8 @@ def send_suggestion():
                   sender=environ['mail-user'],
                   recipients=environ['mail-recipients'].split(" "))
     mail.send(msg)
-    return {"result": "ok"}
+    #todo: return page with happy zoe and thanks for suggestion, then redirect after 2 seconds
+    return "<h1>Thank you!</h1>"
 
 
 @app.route("/admin/", methods=['GET', 'POST'])
@@ -64,6 +65,7 @@ def admin():
     return render_template("admin.html", form=form)
 
 def parse_command(command, args):
+    #todo: implement database queries
     if command == "set-api-key":
         api_key_queue.put(args[0])
         logging.info("mooncaker: Received a new API key")

@@ -1,12 +1,19 @@
 version: '3.3'
 
 services:
+    datacaker:
+        build: ./mongodb
+        expose:
+            - 27017
+
     gunicorn:
         build: ./gunicorn
+        expose:
+            - 5000
         ports:
-            - 5000:5000 
-            - 465:465
-
+            - 587:587
+        depends_on:
+            - datacaker
     nginx:
         build: ./nginx
         ports:
@@ -14,6 +21,3 @@ services:
             - 443:443
         depends_on:
             - gunicorn
-
-
-

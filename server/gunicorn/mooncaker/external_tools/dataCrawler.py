@@ -256,8 +256,8 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
 def start_crawling(API_KEY, get_key):
     REGIONS = ['euw1', 'eun1', 'kr', 'na1']
     TIERS = ['DIAMOND', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'IRON']
-    DIVISIONS = ['I', 'II', 'III', 'IV', 'V']
-    cluster = MongoClient('mongodb://localhost:27017/')
+    DIVISIONS = ['I', 'II', 'III', 'IV']
+    cluster = MongoClient('mongodb://datacaker:27017/')
     db = cluster["mooncaker"]
     db_matches = db["matches"]
     lol_watcher = LolWatcher(API_KEY)
