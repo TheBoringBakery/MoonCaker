@@ -313,7 +313,7 @@ def main():
             print("Couldn't find the specified file with the RIOT API key, please check again")
             return
 
-    db_url = "mongodb://localhost:27017" if args['db_url'] is None else args['db-url']
+    db_url = "mongodb://localhost:27017" if args['db_url'] is None else args['db_url']
 
     start_crawling(RIOT_API_KEY, input, db_url)
 
