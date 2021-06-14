@@ -39,7 +39,8 @@ def sum_name_id(lw, region, mode, tier, division, get_key):
                 time.sleep(60)
             else:
                 raise
-    return [summoner.get('summonerName') for summoner in players_list], [summoner.get('summonerId') for summoner in players_list]
+    return [summoner.get('summonerName') for summoner in players_list], [summoner.get('summonerId') for summoner in
+                                                                         players_list]
 
 
 # gets account Ids of given summoners, returning None for accounts not found (che cazzo ne so anche se li ho appena fetchati dalla lega non li trova)
@@ -253,25 +254,39 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
                     raise
 
 
-def start_crawling(API_KEY, get_key, db_url = "mongodb://datacaker:27017"):
+def get_uncrawled(db):
     REGIONS = ['euw1', 'eun1', 'kr', 'na1']
     TIERS = ['DIAMOND', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'IRON']
     DIVISIONS = ['I', 'II', 'III', 'IV']
+    if not "ReDiTi" in db.list_collection_names():
+        comb = [{'region': reg, 'tier': tier, 'division': div, 'crawled': False} for reg in REGIONS for tier in TIERS
+                for div in DIVISIONS]
+        re_di_ti = db["ReDiTi"]
+        re_di_ti.insert_many(comb)
+    else:
+        re_di_ti = db["ReDiTi"]
+    to_crawl = re_di_ti.find({'crawled': False})
+    return [elem for elem in to_crawl]
+
+
+def start_crawling(API_KEY, get_key, db_url = "mongodb://datacaker:27017"):
     cluster = MongoClient(db_url, connect=True)
     db = cluster.get_database("mooncaker")
     db_matches = db.get_collection("matches")
-    db_matches.count_documents({})
+    to_crawl = get_uncrawled(db)
+    db_rediti= db.get_collection("ReDiTi")
     lol_watcher = LolWatcher(API_KEY)
-    for region in REGIONS:
-        for tier in TIERS:
-            for division in DIVISIONS:
-                logging.info(f"datacrawler: Crawling {region}, {tier}, {division}")
-                accounts = account_info(lol_watcher, region, 'RANKED_SOLO_5x5', tier, division, get_key)
-                match_lists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts],
-                                            get_key)
-                match_list = cln_match(match_lists, db_matches)
-                add_new_matches(lol_watcher, match_list, db_matches, region, get_key)
-
+    for elem in to_crawl:
+        region = elem['region']
+        tier = elem['tier']
+        division = elem['division']
+        logging.info(f"datacrawler: Crawling {region}, {tier}, {division}")
+        accounts = account_info(lol_watcher, region, 'RANKED_SOLO_5x5', tier, division, get_key)
+        match_lists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts],
+                                    get_key)
+        match_list = cln_match(match_lists, db_matches)
+        add_new_matches(lol_watcher, match_list, db_matches, region, get_key)
+        db_rediti.update_one({'_id': elem['_id']}, {'$set': {'crawled': True}})
 
 def main():
     # parse arguments in order to get the riot API
