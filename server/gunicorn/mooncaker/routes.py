@@ -36,12 +36,18 @@ def hello_world():
 @app.route('/send_suggestion/', methods=['POST'])
 def send_suggestion():
     text = "Either this is a test or something went wrong with the parsing of the suggestion, see server log for further information"
+    logging.info("mooncaker: a suggestion was submitted")
+    if 'HTTP_ORIGIN' not in request.environ or request.environ['HTTP_ORIGIN'] != 'https://mooncaker.theboringbakery.com':
+        logging.warning("mooncaker: a suggestion from a non-approved domain was made")
+        return "<h1>We are sorry but we cannot validate the origin of this request, please visit theboringbakery.com for the correct interaction.</h1>"
+
     text = str(request.form)
     msg = Message(subject="A suggestion was submitted for Mooncaker!",
                   body=text,
                   sender=environ['mail-user'],
                   recipients=environ['mail-recipients'].split(" "))
     mail.send(msg)
+    logging.info("mooncaker: the suggestion was successfully sent")
     #todo: return page with happy zoe and thanks for suggestion, then redirect after 2 seconds
     return "<h1>Thank you!</h1>"
 
