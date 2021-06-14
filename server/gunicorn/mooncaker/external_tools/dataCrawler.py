@@ -153,7 +153,7 @@ def cln_match(match_lists, db_matches):
     game_ids = [match.get('gameId') for match in match_list]
     game_ids = list(dict.fromkeys(game_ids))
     for g_id in game_ids:
-        if db_matches.count_documents({"gameId": g_id}) > 0:
+        if db_matches.count_documents({"_id": g_id}) > 0:
             game_ids.remove(g_id)
     return game_ids
 
@@ -253,13 +253,14 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
                     raise
 
 
-def start_crawling(API_KEY, get_key):
+def start_crawling(API_KEY, get_key, db_url = "mongodb://datacaker:27017"):
     REGIONS = ['euw1', 'eun1', 'kr', 'na1']
     TIERS = ['DIAMOND', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'IRON']
     DIVISIONS = ['I', 'II', 'III', 'IV']
-    cluster = MongoClient('mongodb://datacaker:27017', connect=True)
-    db = cluster["mooncaker"]
-    db_matches = db["matches"]
+    cluster = MongoClient(db_url, connect=True)
+    db = cluster.get_database("mooncaker")
+    db_matches = db.get_collection("matches")
+    db_matches.count_documents({})
     lol_watcher = LolWatcher(API_KEY)
     for region in REGIONS:
         for tier in TIERS:
@@ -277,6 +278,7 @@ def main():
     parser = argparse.ArgumentParser(description='Crawls some lol data about clash')
     parser.add_argument('--API-file', help='the filename with the riot API key')
     parser.add_argument('--API', help='the riot API key')
+    parser.add_argument('--db-url', help='the url of the mongo db, default is localhost')
     args = vars(parser.parse_args())
 
     if args['API'] is None and args['API_file'] is None:
@@ -285,7 +287,7 @@ def main():
         return
 
     RIOT_API_KEY = ""
-    if not args['API'] is None:
+    if args['API'] is not None:
         RIOT_API_KEY = args['API']
     else:
         RIOT_API_KEY_FILENAME = args['API_file']
@@ -295,7 +297,10 @@ def main():
         except FileNotFoundError:
             print("Couldn't find the specified file with the RIOT API key, please check again")
             return
-    start_crawling(RIOT_API_KEY, input)
+
+    db_url = "mongodb://localhost:27017" if args['db-url'] is None else args['db-url']
+
+    start_crawling(RIOT_API_KEY, input, db_url)
 
 
 if __name__ == "__main__":
