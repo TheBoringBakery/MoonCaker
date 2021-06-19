@@ -158,13 +158,13 @@ def cln_match(match_lists, db_matches):
         Returns:
         List[Dict]: list of clash games ids
     """
-    match_list = [match for matches in match_lists for match in matches]
-    game_ids = [match.get('gameId') for match in match_list]
-    game_ids = list(dict.fromkeys(game_ids))
-    for g_id in game_ids:
+    # match_list = [match for matches in match_lists for match in matches]
+    # game_ids = [match.get('gameId') for match in match_list]
+    # game_ids = list(dict.fromkeys(game_ids))
+    for g_id in match_lists:
         if db_matches.count_documents({"_id": g_id}) > 0:
-            game_ids.remove(g_id)
-    return game_ids
+            match_lists.remove(g_id)
+    return match_lists
 
 
 def check_jungler(player):
@@ -341,9 +341,7 @@ def main():
         match_lists = clash_matches(watcher, region, [account.get('puuid') for account in accounts], input)
         print("Match list retrieved", flush=True) 
         match_list = [match for matches in match_lists for match in matches]
-        game_ids = [match.get('gameId') for match in match_list]
-        game_ids = list(dict.fromkeys(game_ids))
-        for g_id in game_ids[:20]:
+        for g_id in match_list[:20]:
             print("Getting match by id", flush=True)
             match = watcher.match.by_id(region, g_id)
             print("Got match by id", flush=True)
