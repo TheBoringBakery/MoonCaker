@@ -9,6 +9,10 @@ RUN chmod +x /start.sh
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN chmod +x install_riot_watcher.sh
+
+RUN ./install_riot_watcher.sh
+
 EXPOSE 5000 587
 
 ENV PYTHONPATH=/mooncaker

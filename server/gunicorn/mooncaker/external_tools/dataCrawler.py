@@ -10,6 +10,12 @@ import time
 import logging
 
 
+BIG_REGIONS = ['europe', 'americas', 'asia']
+REGIONS = ['euw1', 'eun1', 'kr', 'na1']
+REGION2BIGREGION = {'euw1': 'europe', 'eun1': 'europe', 'kr': 'asia', 'na1': 'americas'}
+TIERS = ['DIAMOND', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'IRON']
+DIVISIONS = ['I', 'II', 'III', 'IV']
+
 def sum_name_id(lw, region, mode, tier, division, get_key):
     """
         Fetch all the summoner names in a tier and division
@@ -58,11 +64,11 @@ def acc_id_by_sum_name(lw, region, summoner_names, get_key):
         List[String]: list of accountIds associated to input summoner names, containing None if no accountId was found for the summoner name
     """
     ids = []
-    for name in summoner_names[:10]:
+    for name in summoner_names[:10]: #todo: what is this slicing for (?)
         redo = True
         while redo:
             try:
-                ids.append(lw.summoner.by_name(region, name).get('accountId'))
+                ids.append(lw.summoner.by_name(region, name).get('puuid'))
                 redo = False
             except ApiError as err:
                 if err.response.status_code == 404:
@@ -79,7 +85,7 @@ def acc_id_by_sum_name(lw, region, summoner_names, get_key):
 
 
 # gets Clash match list for each given accountId, returning None for accounts with no clash games
-def clash_matches(lw, region, accountIds, get_key):
+def clash_matches(lw, region, puuids, get_key):
     """
         Fetch all clash games for the given accounts
 
@@ -93,11 +99,12 @@ def clash_matches(lw, region, accountIds, get_key):
         List[List[Dict]]: list containing a list of dictionaries with clash matches info for each accountId
     """
     match_list = []
-    for encr_id in accountIds:
+    big_region = REGION2BIGREGION[region]
+    for encr_puuid in puuids:
         redo = True
         while redo:
             try:
-                match_list.append(lw.match.matchlist_by_account(region, encr_id, '700').get('matches'))
+                match_list.append(lw.matchv5.matchlist_by_puuid(big_region, encr_puuid).get('matches')) #todo: filter by queue '700'
                 redo = False
             except ApiError as err:
                 if err.response.status_code == 404:
@@ -110,6 +117,8 @@ def clash_matches(lw, region, accountIds, get_key):
                     time.sleep(60)
                 else:
                     raise
+    
+    match_list = list(filter(None, match_list))
     return match_list
 
 
@@ -134,13 +143,13 @@ def account_info(lw, region, mode, tier, division, get_key):
     accounts = []
     for i in range(len(acc_ids)):
         if not acc_ids[i] is None:
-            accounts.append({'summonerName': names[i], 'summonerId': sum_ids[i], 'accountId': acc_ids[i]})
+            accounts.append({'summonerName': names[i], 'summonerId': sum_ids[i], 'puuid': acc_ids[i]})
     return accounts
 
 
 def cln_match(match_lists, db_matches):
     """
-        Clean match lists by removing None values and duplicated games, both present inside the list and the database
+        Clean match lists by removing duplicated games, both present inside the list and the database
 
         Parameters:
         match_lists(List[Dict]): List of clash games for each account
@@ -149,8 +158,7 @@ def cln_match(match_lists, db_matches):
         Returns:
         List[Dict]: list of clash games ids
     """
-    match_list = list(filter(None, match_lists))
-    match_list = [match for matches in match_list for match in matches]
+    match_list = [match for matches in match_lists for match in matches]
     game_ids = [match.get('gameId') for match in match_list]
     game_ids = list(dict.fromkeys(game_ids))
     for g_id in game_ids:
@@ -255,9 +263,6 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
 
 
 def get_uncrawled(db):
-    REGIONS = ['euw1', 'eun1', 'kr', 'na1']
-    TIERS = ['DIAMOND', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'IRON']
-    DIVISIONS = ['I', 'II', 'III', 'IV']
     if not "ReDiTi" in db.list_collection_names():
         comb = [{'region': reg, 'tier': tier, 'division': div, 'crawled': False} for reg in REGIONS for tier in TIERS
                 for div in DIVISIONS]
@@ -281,8 +286,8 @@ def start_crawling(API_KEY, get_key, db_url = "mongodb://datacaker:27017"):
         tier = elem['tier']
         division = elem['division']
         logging.info(f"datacrawler: Crawling {region}, {tier}, {division}")
-        accounts = account_info(lol_watcher, region, 'RANKED_SOLO_5x5', tier, division, get_key)
-        match_lists = clash_matches(lol_watcher, 'euw1', [account.get('accountId') for account in accounts],
+        accounts = account_info(lol_watcher, region, 'RANKED_SOLO_5x5', tier, division, get_key) #todo: not hardcode mode
+        match_lists = clash_matches(lol_watcher, region, [account.get('puuid') for account in accounts],
                                     get_key)
         match_list = cln_match(match_lists, db_matches)
         add_new_matches(lol_watcher, match_list, db_matches, region, get_key)
@@ -294,6 +299,7 @@ def main():
     parser.add_argument('--API-file', help='the filename with the riot API key')
     parser.add_argument('--API', help='the riot API key')
     parser.add_argument('--db-url', help='the url of the mongo db, default is localhost')
+    parser.add_argument('--no-db', help= 'if given true it will only test the connection to riot API', action='store_true')
     args = vars(parser.parse_args())
 
     if args['API'] is None and args['API_file'] is None:
@@ -315,8 +321,34 @@ def main():
 
     db_url = "mongodb://localhost:27017" if args['db_url'] is None else args['db_url']
 
-    start_crawling(RIOT_API_KEY, input, db_url)
-
+    if args['no_db'] != True:
+        start_crawling(RIOT_API_KEY, input, db_url)
+    else:
+        #begin test without db
+        import random
+        region = random.choice(REGIONS)
+        tier = random.choice(TIERS)
+        division = random.choice(DIVISIONS)
+        print(f"Connecting to lol API, crawling {region} {tier} {division}", flush=True)
+        watcher = LolWatcher(api_key=RIOT_API_KEY)
+        print("Connected", flush=True)
+        print("Retrieving account info", flush=True)
+        accounts = account_info(watcher, region, 'RANKED_SOLO_5x5', tier, division, input)
+        print("Account info retrieved", flush=True)
+        print("Retrieving match list", flush=True)
+        match_lists = clash_matches(watcher, region, [account.get('puuid') for account in accounts], input)
+        print("Match list retrieved", flush=True) 
+        match_list = [match for matches in match_lists for match in matches]
+        game_ids = [match.get('gameId') for match in match_list]
+        game_ids = list(dict.fromkeys(game_ids))
+        for g_id in game_ids[:20]:
+            print("Getting match by id", flush=True)
+            match = watcher.match.by_id(region, g_id)
+            print("Got match by id", flush=True)
+            m2_frame = watcher.match.timeline_by_match(region, g_id)['frames'][2]['participantFrames']
+            m_last_frame = watcher.match.timeline_by_match(region, g_id)['frames'][-1]['participantFrames']
+            print("Successfully crawled one match", flush=True)
+        print("Successfully crawled 20 matches", flush=True)
 
 if __name__ == "__main__":
     main()
