@@ -104,7 +104,7 @@ def clash_matches(lw, region, puuids, get_key):
         redo = True
         while redo:
             try:
-                match_list.append(lw.matchv5.matchlist_by_puuid(big_region, encr_puuid).get('matches')) #todo: filter by queue '700'
+                match_list.append(lw.matchv5.matchlist_by_puuid(big_region, encr_puuid))
                 redo = False
             except ApiError as err:
                 if err.response.status_code == 404:
@@ -207,9 +207,11 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
         redo = True
         while redo:
             try:
-                match = lw.match.by_id(region, g_id)
-                m2_frame = lw.match.timeline_by_match(region, g_id)['frames'][2]['participantFrames']
-                m_last_frame = lw.match.timeline_by_match(region, g_id)['frames'][-1]['participantFrames']
+                match = lw.matchv5.by_id(region, g_id)
+                if match['info']['queueId'] != 700: #get only clash queues: todo: improve code
+                    break
+                m2_frame = lw.matchv5.timeline_by_match(region, g_id)['frames'][2]['participantFrames']
+                m_last_frame = lw.matchv5.timeline_by_match(region, g_id)['frames'][-1]['participantFrames']
                 redo = False
                 m2_pos = {int(num): m2_frame[num]['position'] for num in m2_frame.keys()}
                 new_doc = {"_id": match["gameId"], "region": 'euw1', "duration": match["gameDuration"],
