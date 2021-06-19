@@ -14,7 +14,7 @@ import logging
 BIG_REGIONS = ['europe', 'americas', 'asia']
 REGIONS = ['euw1', 'eun1', 'kr', 'na1']
 #league api wants region=euw1,... while matchv5 wants region=europe,... (riot, hello?!)
-REGION2BIGREGION = {'euw1': 'europe', 'eun1': 'europe', 'kr': 'asia', 'na1': 'americas'}
+REGION2BIG_REGION = {'euw1': 'europe', 'eun1': 'europe', 'kr': 'asia', 'na1': 'americas'}
 TIERS = ['DIAMOND', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'IRON']
 DIVISIONS = ['I', 'II', 'III', 'IV']
 
@@ -23,7 +23,7 @@ def set_new_key(watcher, new_key):
     watcher._base_api._api_key = new_key() #todo: is this even the right way to set the new key?
     logging.debug(f"datacrawler: received new api key ending with {watcher._base_api._api_key[-5:]}")
 
-def safe_api_call(command, wait_set_new_key, retry_count = 3):
+def safe_api_call(command, wait_set_new_key, retry_count=3):
     """calls the given command and checks for the successful outcome
     If the outcome is not successful, it intercepts the error and based on
     that will either retry (up to 3 times) or return unsuccessful status
@@ -34,7 +34,7 @@ def safe_api_call(command, wait_set_new_key, retry_count = 3):
         redo_count (int, optional): used internally to count how many times the call has been retried. Defaults to 3.
 
     Returns:
-        [type]: [description]
+        (bool, Any | None): the outcome of the operation and the result, None if it was unsuccessful
     """
     result = None
     call_is_successful = False
@@ -122,7 +122,7 @@ def clash_matches(lw, region, puuids, get_key):
         List[List[Dict]]: list containing a list of dictionaries with clash matches info for each accountId
     """
     match_list = []
-    big_region = REGION2BIGREGION[region] 
+    big_region = REGION2BIG_REGION[region] 
     for encr_puuid in puuids:
         command2call = partial(lw.matchv5.matchlist_by_puuid, big_region, encr_puuid)
         is_successful, matches = safe_api_call(command2call, get_key)
@@ -214,7 +214,7 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
         region(String): a server region
         get_key(Func): function that returns a new api key
     """
-    big_region = REGION2BIGREGION[region]
+    big_region = REGION2BIG_REGION[region]
     for g_id in match_list:
 
         #get match by id
@@ -288,7 +288,7 @@ def start_crawling(API_KEY, get_key, db_url = "mongodb://datacaker:27017"):
     to_crawl = get_uncrawled(db)
     db_rediti= db.get_collection("ReDiTi")
     lol_watcher = LolWatcher(API_KEY)
-    key_set = partial(set_new_key, lol_watcher)
+    key_set = partial(set_new_key, lol_watcher, get_key)
     for elem in to_crawl:
         region = elem['region']
         tier = elem['tier']
@@ -342,6 +342,7 @@ def main():
         region = random.choice(REGIONS)
         tier = random.choice(TIERS)
         division = random.choice(DIVISIONS)
+        big_region = REGION2BIG_REGION[region]
         print(f"Connecting to lol API, crawling {region} {tier} {division}", flush=True)
         watcher = LolWatcher(api_key=RIOT_API_KEY)
         print("Connected", flush=True)
@@ -354,10 +355,9 @@ def main():
         match_list = [match for matches in match_lists for match in matches]
         for g_id in match_list[:20]:
             print("Getting match by id", flush=True)
-            watcher.matchv5.by_id(region, g_id)
+            watcher.matchv5.by_id(big_region, g_id)
             print("Got match by id", flush=True)
-            watcher.matchv5.timeline_by_match(region, g_id)['frames'][2]['participantFrames']
-            watcher.matchv5.timeline_by_match(region, g_id)['frames'][-1]['participantFrames']
+            watcher.matchv5.timeline_by_match(big_region, g_id)
             print("Successfully crawled one match", flush=True)
         print("Successfully crawled 20 matches", flush=True)
         return
