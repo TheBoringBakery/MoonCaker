@@ -5,4 +5,4 @@ unzip master.zip -d .
 cd Riot-Watcher-master
 python setup.py install
 cd ..
-# rm -r -f Riot-Watcher-master/
+rm -r -f Riot-Watcher-master/
