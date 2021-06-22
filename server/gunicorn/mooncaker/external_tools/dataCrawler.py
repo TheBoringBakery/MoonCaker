@@ -22,7 +22,7 @@ DIVISIONS = ['I', 'II', 'III', 'IV']
 
 def set_new_key(watcher, new_key):
     logging.debug("datacrawler: going to possibly hang while waiting new api key")
-    watcher._base_api._api_key = new_key() #todo: is this even the right way to set the new key?
+    watcher._base_api._api_key = new_key() #todo: is this even the right way to set the new key? (I guess best way would be to recreate a new Lolwatcher)
     logging.debug(f"datacrawler: received new api key ending with {watcher._base_api._api_key[-5:]}")
 
 def safe_api_call(command, wait_set_new_key, retry_count=3):
@@ -129,7 +129,8 @@ def clash_matches(lw, region, puuids, get_key):
         command2call = partial(lw.matchv5.matchlist_by_puuid, big_region, encr_puuid)
         is_successful, matches = safe_api_call(command2call, get_key)
         if is_successful:
-            match_list.append(matches)
+            for match in matches:
+                match_list.append(match)
     
     match_list = list(filter(None, match_list)) #todo: might not be needed anymore
     return match_list
@@ -154,12 +155,15 @@ def account_info(lw, region, mode, tier, division, get_key):
     names, sum_ids = sum_name_id(lw, region, mode, tier, division, get_key)
     if names is None or sum_ids is None:
         return None
-    acc_ids = acc_id_by_sum_name(lw, region, names, get_key)
     accounts = []
-    for i in range(len(acc_ids)):
-        if not acc_ids[i] is None:
-            accounts.append({'summonerName': names[i], 'summonerId': sum_ids[i], 'puuid': acc_ids[i]})
-    return accounts
+    names = names[:10] #todo: remove as soon as possible
+    batch_size = 100
+    for index in range(0, len(names), batch_size):
+        acc_ids = acc_id_by_sum_name(lw, region, names[index: min(index+batch_size, len(names))], get_key)
+        for i in range(len(acc_ids)):
+            if not acc_ids[i] is None:
+                accounts.append({'summonerName': names[i], 'summonerId': sum_ids[i], 'puuid': acc_ids[i]})
+        return accounts
 
 
 def cln_match(match_lists, db_matches):
@@ -222,7 +226,7 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
     for g_id in match_list:
 
         #get match by id
-        command2call = partial(lw.matchv5.by_id, region, g_id)
+        command2call = partial(lw.matchv5.by_id, big_region, g_id)
         is_successful, match = safe_api_call(command2call, get_key)
         if not is_successful:
             continue #unlucky
@@ -372,7 +376,7 @@ def main():
         print("Successfully crawled 20 matches", flush=True)
         return
 
-    db_url = "mongodb://localhost:27017" if args['db_url'] is None else args['db_url']
+    db_url =  "mongodb+srv://BoringAdmin:EuPa0vE4NLmPRz67@cluster0.1fnm0.mongodb.net/mooncaker?retryWrites=true&w=majority"#"mongodb://localhost:27017" if args['db_url'] is None else args['db_url']
 
     start_crawling(RIOT_API_KEY, input, db_url)
     
