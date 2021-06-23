@@ -114,7 +114,7 @@ def clash_matches(watcher, region, names, sum_ids, get_key, db_matches):
     match_list = []
     big_region = REGION2BIG_REGION[region] 
     for encr_puuid in puuids:
-        command2call = partial(watcher.matchv5.matchlist_by_puuid, big_region, encr_puuid)
+        command2call = partial(watcher.matchv5.matchlist_by_puuid, big_region, encr_puuid, 0, 100)
         is_successful, matches = safe_api_call(command2call, get_key)
         if is_successful:
             for match in matches:
@@ -173,7 +173,7 @@ def cln_match(match_lists, db_matches):
 
 
 def check_jungler(player):
-    spells = [player["spell1Id"], player["spell2Id"]]
+    spells = [player["summoner1Id"], player["summoner2Id"]]
     return 11 in spells  # 11 is smite #todo (low): remove hardcoded value
 
 
@@ -218,7 +218,7 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
             continue #unlucky
 
         if match['info']['queueId'] != 700: #get only clash queues: todo: improve code
-            break
+            continue
 
         #get timeline to enstablish roles
         command2call = partial(lw.matchv5.timeline_by_match, big_region, g_id)
@@ -226,25 +226,24 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
         if not is_successful:
             continue #unlucky part2
 
-        m2_frame = timeline['frames'][2]['participantFrames']
-        m_last_frame = timeline['frames'][-1]['participantFrames']
+        m2_frame = timeline['info']['frames'][2]['participantFrames']
+        m_last_frame = timeline['info']['frames'][-1]['participantFrames']
         m2_pos = {int(num): m2_frame[num]['position'] for num in m2_frame.keys()}
-        new_doc = {"_id": match["gameId"], "region": region, "duration": match["gameDuration"],
-                    "season": match["seasonId"],
-                    "patch": float(re.search('^\d+[.]\d+', match["gameVersion"]).group())}
-        teams = [team["teamId"] for team in match["teams"]]
-        new_doc["winner"] = teams[0] if match["teams"][0]["win"] == 'Win' else teams[1]
+        new_doc = {"_id": match['info']["gameId"], "region": region, "duration": match['info']["gameDuration"],
+                   "patch": float(re.search('^\d+[.]\d+', match['info']["gameVersion"]).group())}
+        teams = [team["teamId"] for team in match['info']["teams"]]
+        new_doc["winner"] = teams[0] if match['info']["teams"][0]["win"] == 'Win' else teams[1]
         i = 0
         bans = [[], []]
-        for team in match["teams"]:
+        for team in match['info']["teams"]:
             for ban in team["bans"]:
                 bans[i].append(ban["championId"])
             i += 1
         teams = ({"teamId": teams[0], "bans": bans[0]}, {"teamId": teams[1], "bans": bans[0]})
-        identities = {part["participantId"]: part["player"]["summonerId"] for part in
-                        match["participantIdentities"]}
+        identities = {part["participantId"]: part["puuid"] for part in
+                      match['info']["participants"]}
         bot = [[], []]
-        for player in match["participants"]:
+        for player in match['info']["participants"]:
             team = 0 if player["teamId"] == teams[0]["teamId"] else 1
             role = get_role(m2_pos[player["participantId"]], player)
             champion = player["championId"]
@@ -275,7 +274,7 @@ def get_uncrawled(db):
     return [elem for elem in to_crawl]
 
 
-def start_crawling(API_KEY, get_key_blocking, db_url = "mongodb://datacaker:27017"):
+def start_crawling(API_KEY, get_key_blocking, db_url="mongodb://datacaker:27017"):
     cluster = MongoClient(db_url, connect=True)
     db = cluster.get_database("mooncaker")
     db_matches = db.get_collection("matches")
