@@ -61,28 +61,6 @@ def safe_api_call(command, wait_set_new_key, retry_count=3):
             return safe_api_call(command, wait_set_new_key, retry_count - 1)
     return call_is_successful, result
 
-def sum_name_id(lw, region, mode, tier, division, get_key):
-    """
-        Fetch all the summoner names in a tier and division
-
-        Parameters:
-        lw (LolWatcher): a LolWatcher instance
-        region(String): a server region
-        mode(String): type of queue
-        tier(String): tier of the queue
-        division(String): division of the queue
-        get_key(Func): function that returns a new api key
-
-        Returns:
-        List[List[String]]: list of players' summoner name and summonerId belonging to the given tier,division,region
-    """
-    command2call = partial(lw.league.entries, region, mode, tier, division)
-    is_successful, players_list = safe_api_call(command2call, get_key)
-    if is_successful:
-        return [summoner.get('summonerName') for summoner in players_list], \
-               [summoner.get('summonerId') for summoner in players_list]
-    return None, None
-
 
 # gets account Ids of given summoners, returning None for accounts not found (che cazzo ne so anche se li ho appena fetchati dalla lega non li trova)
 def acc_id_by_sum_name(lw, region, summoner_names, get_key):
@@ -108,38 +86,53 @@ def acc_id_by_sum_name(lw, region, summoner_names, get_key):
         #     ids.append(None) #todo: why is this ? - was present in previous version
     return ids
 
-
-# gets Clash match list for each given accountId, returning None for accounts with no clash games
-def clash_matches(lw, region, puuids, get_key):
+def clash_matches(watcher, region, names, sum_ids, get_key, db_matches):
     """
-        Fetch all clash games for the given accounts
+    From summoner names and ids, gets their puuid, their match list,
+    then returns only the clash matches of the given players.
 
-        Parameters:
-        lw (LolWatcher): a LolWatcher instance
-        region(String): the server region to which the accounts belong
-        accountIds(List[String]): list of accountIds to search games for
-        get_key(Func): function that returns a new api key
+    Args:
+        watcher (LolWatcher): a LolWatcher instance
+        region (str): the server region to which the accounts belong (euw1, eune1, ...)
+        names (list(str)): list of summoner names to crawl
+        sum_ids (list[int]): list of summoner ids respetive to the above name
+        get_key (Callable): function that waits for and sets a new api
+        db_matches (Collection): pymongo collection containing matches documents
 
-        Returns:
-        List[List[Dict]]: list containing a list of dictionaries with clash matches info for each accountId
+    Returns:
+        list(str): list of strings with the clash match ids as string
     """
+    #retrieve accounts puuids
+    accounts = []
+    acc_ids = acc_id_by_sum_name(watcher, region, names, get_key)
+    for i in range(len(acc_ids)):
+        if not acc_ids[i] is None:
+            accounts.append({'summonerName': names[i], 'summonerId': sum_ids[i], 'puuid': acc_ids[i]})
+    
+    #retrieve match list for each account
+    puuids = [account.get('puuid') for account in accounts]
     match_list = []
     big_region = REGION2BIG_REGION[region] 
     for encr_puuid in puuids:
-        command2call = partial(lw.matchv5.matchlist_by_puuid, big_region, encr_puuid)
+        command2call = partial(watcher.matchv5.matchlist_by_puuid, big_region, encr_puuid)
         is_successful, matches = safe_api_call(command2call, get_key)
         if is_successful:
             for match in matches:
                 match_list.append(match)
     
     match_list = list(filter(None, match_list)) #todo: might not be needed anymore
-    return match_list
+
+    if db_matches is None:
+        return match_list
+    return cln_match(match_list, db_matches)
+    
+    
 
 
 # returns list of account infos: summoner name,summoner Id, account Id
-def account_info(lw, region, mode, tier, division, get_key):
+def summoner_names(lw, region, tier, division, get_key, mode='RANKED_SOLO_5x5'):
     """
-        Fetch account details about all the players in the given tier,division,region,mode
+        Fetch all the summoner names in a tier and division
 
         Parameters:
         lw (LolWatcher): a LolWatcher instance
@@ -150,21 +143,14 @@ def account_info(lw, region, mode, tier, division, get_key):
         get_key(Func): function that returns a new api key
 
         Returns:
-        List[Dict]: list of players' summoner name, summonerId, accountId belonging to the given tier,division,region
+            List(str), List(str): list of players' summoner name and summonerId belonging to the given tier,division,region
     """
-    names, sum_ids = sum_name_id(lw, region, mode, tier, division, get_key)
-    if names is None or sum_ids is None:
-        return None
-    accounts = []
-    names = names[:10] #todo: remove as soon as possible
-    batch_size = 100
-    for index in range(0, len(names), batch_size):
-        acc_ids = acc_id_by_sum_name(lw, region, names[index: min(index+batch_size, len(names))], get_key)
-        for i in range(len(acc_ids)):
-            if not acc_ids[i] is None:
-                accounts.append({'summonerName': names[i], 'summonerId': sum_ids[i], 'puuid': acc_ids[i]})
-        return accounts
-
+    command2call = partial(lw.league.entries, region, mode, tier, division)
+    is_successful, players_list = safe_api_call(command2call, get_key)
+    if is_successful:
+        return [summoner.get('summonerName') for summoner in players_list], \
+               [summoner.get('summonerId') for summoner in players_list]
+    return None, None
 
 def cln_match(match_lists, db_matches):
     """
@@ -302,14 +288,20 @@ def start_crawling(API_KEY, get_key_blocking, db_url = "mongodb://datacaker:2701
         tier = elem['tier']
         division = elem['division']
         logging.info(f"datacrawler: Crawling {region}, {tier}, {division}")
-        accounts = account_info(lol_watcher, region, 'RANKED_SOLO_5x5', tier, division, key_set) #todo: not hardcode mode
-        if accounts is None:
-            return
-        match_lists = clash_matches(lol_watcher, region,
-                                    [account.get('puuid') for account in accounts],
-                                    key_set)
-        match_list = cln_match(match_lists, db_matches)
-        add_new_matches(lol_watcher, match_list, db_matches, region, key_set)
+        names, sum_ids = summoner_names(lol_watcher, region, tier, division, key_set)
+        if names is None or sum_ids is None:
+            return None
+        
+        #retrieve matches by batches of summoner names 
+        batch_size = 100
+        for index in range(0, len(names), batch_size):
+            match_list = clash_matches(lol_watcher, 
+                                       region, 
+                                       names[index: min(index+batch_size, len(names))], 
+                                       sum_ids, 
+                                       key_set, 
+                                       db_matches)
+            add_new_matches(lol_watcher, match_list, db_matches, region, key_set)
         db_rediti.update_one({'_id': elem['_id']}, {'$set': {'crawled': True}})
 
 def main():
@@ -356,17 +348,22 @@ def main():
         big_region = REGION2BIG_REGION[region]
         print(f"Connecting to lol API, crawling {region} {tier} {division}", flush=True)
         watcher = LolWatcher(api_key=RIOT_API_KEY)
-        get_key= partial(set_new_key, watcher, input)
+        get_key = partial(set_new_key, watcher, input)
         print("Connected", flush=True)
         print("Retrieving account info", flush=True)
-        accounts = account_info(watcher, region, 'RANKED_SOLO_5x5', tier, division, get_key)
-        if accounts is None:
+        names, sum_ids = summoner_names(watcher, region, tier, division, get_key)
+        if names is None or sum_ids is None:
             print("Was not able to retrieve accounts info")
+            return
         print("Account info retrieved", flush=True)
         print("Retrieving match list", flush=True)
-        match_lists = clash_matches(watcher, region, [account.get('puuid') for account in accounts], get_key)
-        print("Match list retrieved", flush=True) 
-        match_list = [match for matches in match_lists for match in matches]
+        match_list = clash_matches(watcher, 
+                                   region, 
+                                   names[:20], 
+                                   sum_ids, 
+                                   get_key, 
+                                   None)
+        print("Match list retrieved", flush=True)
         for g_id in match_list[:20]:
             print("Getting match by id", flush=True)
             watcher.matchv5.by_id(big_region, g_id)
@@ -376,7 +373,7 @@ def main():
         print("Successfully crawled 20 matches", flush=True)
         return
 
-    db_url =  "mongodb+srv://BoringAdmin:EuPa0vE4NLmPRz67@cluster0.1fnm0.mongodb.net/mooncaker?retryWrites=true&w=majority"#"mongodb://localhost:27017" if args['db_url'] is None else args['db_url']
+    db_url = "mongodb://localhost:27017" if args['db_url'] is None else args['db_url']
 
     start_crawling(RIOT_API_KEY, input, db_url)
     
