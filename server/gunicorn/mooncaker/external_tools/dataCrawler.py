@@ -114,7 +114,7 @@ def clash_matches(watcher, region, names, sum_ids, get_key, db_matches):
     match_list = []
     big_region = REGION2BIG_REGION[region] 
     for encr_puuid in puuids:
-        command2call = partial(watcher.matchv5.matchlist_by_puuid, big_region, encr_puuid, 0, 100)
+        command2call = partial(watcher.matchv5.matchlist_by_puuid, big_region, encr_puuid, queue=700, type=None, start=0, count=100)
         is_successful, matches = safe_api_call(command2call, get_key)
         if is_successful:
             for match in matches:
@@ -216,9 +216,6 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
         is_successful, match = safe_api_call(command2call, get_key)
         if not is_successful:
             continue #unlucky
-
-        if match['info']['queueId'] != 700: #get only clash queues: todo: improve code
-            continue
 
         #get timeline to enstablish roles
         command2call = partial(lw.matchv5.timeline_by_match, big_region, g_id)
