@@ -226,7 +226,7 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
         m2_frame = timeline['info']['frames'][2]['participantFrames']
         m_last_frame = timeline['info']['frames'][-1]['participantFrames']
         m2_pos = {int(num): m2_frame[num]['position'] for num in m2_frame.keys()}
-        new_doc = {"_id": match['info']["gameId"], "region": region, "duration": match['info']["gameDuration"],
+        new_doc = {"_id": g_id, "region": region, "duration": match['info']["gameDuration"],
                    "patch": float(re.search('^\d+[.]\d+', match['info']["gameVersion"]).group())}
         teams = [team["teamId"] for team in match['info']["teams"]]
         new_doc["winner"] = teams[0] if match['info']["teams"][0]["win"] == 'Win' else teams[1]
