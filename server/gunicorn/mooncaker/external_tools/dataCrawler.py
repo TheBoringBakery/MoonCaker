@@ -166,7 +166,9 @@ def cln_match(match_lists, db_matches):
     # match_list = [match for matches in match_lists for match in matches]
     # game_ids = [match.get('gameId') for match in match_list]
     # game_ids = list(dict.fromkeys(game_ids))
-    return [g_id for g_id in match_lists if not db_matches.count_documents({"_id": g_id})]
+    not_pres = [g_id for g_id in match_lists if not db_matches.count_documents({"_id": g_id})]
+    not_pres = list(dict.fromkeys(not_pres))
+    return not_pres
 
 
 def check_jungler(player):
