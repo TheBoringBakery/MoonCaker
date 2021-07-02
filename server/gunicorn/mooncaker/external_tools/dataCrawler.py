@@ -167,10 +167,9 @@ def cln_match(match_lists, db_matches):
     # match_list = [match for matches in match_lists for match in matches]
     # game_ids = [match.get('gameId') for match in match_list]
     # game_ids = list(dict.fromkeys(game_ids))
-    for g_id in match_lists:
-        if db_matches.count_documents({"_id": g_id}) > 0: #TODO (high prio): g_id is now a string, is that a problem ?
-            match_lists.remove(g_id)
-    return match_lists
+    not_pres = [g_id for g_id in match_lists if not db_matches.count_documents({"_id": g_id})]
+    not_pres = list(dict.fromkeys(not_pres))
+    return not_pres
 
 
 def check_jungler(player):
