@@ -79,6 +79,7 @@ def acc_id_by_sum_name(lw, region, summoner_names, get_key):
     ids = []
     for name in summoner_names:
         command2call = partial(lw.summoner.by_name, region, name)
+        #todo: check when 404 maybe name has changed
         is_successful, user = safe_api_call(command2call, get_key)
         if is_successful:
             ids.append(user.get('puuid'))
@@ -130,7 +131,7 @@ def clash_matches(watcher, region, names, sum_ids, get_key, db_matches):
 
 
 # returns list of account infos: summoner name,summoner Id, account Id
-def summoner_names(lw, region, tier, division, get_key, mode='RANKED_SOLO_5x5'):
+def summoner_names(lw, region, tier, division, page, get_key, mode='RANKED_SOLO_5x5'):
     """
         Fetch all the summoner names in a tier and division
 
@@ -145,7 +146,7 @@ def summoner_names(lw, region, tier, division, get_key, mode='RANKED_SOLO_5x5'):
         Returns:
             List(str), List(str): list of players' summoner name and summonerId belonging to the given tier,division,region
     """
-    command2call = partial(lw.league.entries, region, mode, tier, division)
+    command2call = partial(lw.league.entries, region, mode, tier, division, page)
     is_successful, players_list = safe_api_call(command2call, get_key)
     if is_successful:
         return [summoner.get('summonerName') for summoner in players_list], \
@@ -261,7 +262,7 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
 
 def get_uncrawled(db):
     if not "ReDiTi" in db.list_collection_names():
-        comb = [{'region': reg, 'tier': tier, 'division': div, 'crawled': False} for reg in REGIONS for tier in TIERS
+        comb = [{'region': reg, 'tier': tier, 'division': div, 'page': 1, 'crawled': False} for reg in REGIONS for tier in TIERS
                 for div in DIVISIONS]
         re_di_ti = db["ReDiTi"]
         re_di_ti.insert_many(comb)
@@ -283,21 +284,28 @@ def start_crawling(API_KEY, get_key_blocking, db_url="mongodb://datacaker:27017"
         region = elem['region']
         tier = elem['tier']
         division = elem['division']
-        logging.info(f"datacrawler: Crawling {region}, {tier}, {division}")
-        names, sum_ids = summoner_names(lol_watcher, region, tier, division, key_set)
-        if names is None or sum_ids is None:
-            return None
+        page = elem['page']
         
-        #retrieve matches by batches of summoner names 
-        batch_size = 100
-        for index in range(0, len(names), batch_size):
-            match_list = clash_matches(lol_watcher, 
-                                       region, 
-                                       names[index: min(index+batch_size, len(names))], 
-                                       sum_ids, 
-                                       key_set, 
-                                       db_matches)
-            add_new_matches(lol_watcher, match_list, db_matches, region, key_set)
+        is_last_page = False
+        while not is_last_page:
+            logging.info(f"datacrawler: Crawling {region}, {tier}, {division}, {page}")
+            names, sum_ids = summoner_names(lol_watcher, region, tier, division, page, key_set)
+            if names is None or sum_ids is None:
+                is_last_page = True
+                break
+            page += 1
+
+            #retrieve matches by batches of summoner names 
+            batch_size = 100
+            for index in range(0, len(names), batch_size):
+                match_list = clash_matches(lol_watcher, 
+                                        region, 
+                                        names[index: min(index+batch_size, len(names))], 
+                                        sum_ids, 
+                                        key_set, 
+                                        db_matches)
+                add_new_matches(lol_watcher, match_list, db_matches, region, key_set)
+                db_rediti.update_one({'_id': elem['_id']}, {'$set': {'page': page}})
         db_rediti.update_one({'_id': elem['_id']}, {'$set': {'crawled': True}})
 
 def main():
