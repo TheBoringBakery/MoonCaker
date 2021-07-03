@@ -7,7 +7,7 @@ services:
             - 27017
 
     gunicorn:
-        build: ./gunicorn
+        build: ./mooncaker
         expose:
             - 5000
         ports:

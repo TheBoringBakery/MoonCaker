@@ -1,4 +1,4 @@
-# Clash Comp Advisor
+# Mooncaker server
 
 ## Purpose
 Help noob players advence in their learning of drafting through personalized suggestions. Learn their weaknesses and strenghts.
