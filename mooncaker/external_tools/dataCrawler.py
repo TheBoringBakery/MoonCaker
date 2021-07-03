@@ -148,7 +148,7 @@ def summoner_names(lw, region, tier, division, page, get_key, mode='RANKED_SOLO_
     """
     command2call = partial(lw.league.entries, region, mode, tier, division, page)
     is_successful, players_list = safe_api_call(command2call, get_key)
-    if is_successful:
+    if is_successful and players_list:
         return [summoner.get('summonerName') for summoner in players_list], \
                [summoner.get('summonerId') for summoner in players_list]
     return None, None
