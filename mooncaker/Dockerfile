@@ -4,9 +4,9 @@ ADD . /mooncaker
 ADD ./.ssl /.ssl
 
 
-ENV gunicorn_config_file="/mooncaker/gunicorn.conf.py"
-ENV use_tls="true"
-ENV domain="theboringbakery.com"
+ENV GUNICORN_CONFIG_FILE="/mooncaker/gunicorn.conf.py"
+ENV USE_TLS="true"
+ENV DOMAIN="theboringbakery.com"
 ENV MODULE_NAME="mooncaker"
 ENV PYTHONPATH="/mooncaker"
 
