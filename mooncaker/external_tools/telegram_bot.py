@@ -5,7 +5,7 @@ from pymongo import MongoClient
 from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 from os import getcwd, path
-from mooncaker.__init__ import app
+from mooncaker.__init__ import app,api_key_queue
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -65,10 +65,10 @@ def set_api_key(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(f"Gimme the new API key")
 
 
-def others(update: Update, context: CallbackContext, set_api) -> None:
+def others(update: Update, context: CallbackContext) -> None:
     global waiting_api_key
     if waiting_api_key:
-        set_api(update.message.text)
+        api_key_queue.put(update.message.text)
         waiting_api_key = False
 
 def get_ReDiTi(update: Update, context: CallbackContext) -> None:
@@ -101,8 +101,7 @@ def start_bot(token, set_api):
     dispatcher.add_handler(CommandHandler("get_ReDiTi", get_ReDiTi))
     dispatcher.add_handler(CommandHandler("get_count", get_count))
 
-    partial_set_api = partial(others, set_api=set_api)
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, partial_set_api))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, others))
 
     # Start the Bot
     updater.start_polling()
