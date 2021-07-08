@@ -6,7 +6,8 @@ from flask_talisman import Talisman
 from dotenv import load_dotenv
 from os import environ
 from multiprocessing import Process, Queue
-from mooncaker.external_tools.dataCrawler import start_crawling
+from mooncaker.external_tools.data_crawler import start_crawling
+from mooncaker.external_tools.telegram_bot import start_bot
 import logging
 
 
@@ -33,6 +34,8 @@ try:
     app.config['SALT'] = environ['hash-salt'].encode('latin1').decode('unicode-escape').encode('latin1')
     app.config['ADMIN_USER'] = environ['admin-user']
     app.config['ADMIN_PASS'] = environ['admin-hashed-pass'].encode('latin1').decode('unicode-escape').encode('latin1')
+    app.config['TELEGRAM_TOKEN'] = environ['telegram-token']
+
 except KeyError:
     print("The .env file was improperly set, please check the README for further information")
     exit()
@@ -40,12 +43,16 @@ except KeyError:
 mail = Mail(app)
 Bootstrap(app)
 
-api_key_queue = Queue(maxsize=1)
+api_key_queue = Queue()
 DUMMY_API_KEY = "RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" #this key DOESN'T work but it's needed to start the process. 
 #TODO (low): can we avoid using the above key ? 
 
-crawling_process = Process(target=start_crawling, args=(DUMMY_API_KEY, api_key_queue.get, ))
+crawling_process = Process(target=start_crawling, args=(DUMMY_API_KEY, api_key_queue.get,))
 crawling_process.start()
 logging.info("mooncaker: starting datacrawling")
+bot_process = Process(target=start_bot, args=(app.config['TELEGRAM_TOKEN'], api_key_queue.put,))
+bot_process.start()
+logging.info("mooncaker: starting telegram bot")
+
 
 from mooncaker import routes

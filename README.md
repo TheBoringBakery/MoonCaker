@@ -9,7 +9,7 @@ Python version 3.7.x.
 To run the dataCrawler.py, basic usage is:
 ```bash
 pip install -r requirements.txt
-python dataCrawler.py [--API-file API_FILE] [--API API]
+python data_crawler.py [--API-file API_FILE] [--API API]
 ```
 Usage with a virtual environment (linux):
 ```bash
@@ -17,7 +17,7 @@ pip install virtualenv
 python -m venv env
 source ./env
 pip install -r requirements.txt
-python dataCrawler.py [--API-file API_FILE] [--API API]
+python data_crawler.py [--API-file API_FILE] [--API API]
 ```
 Note that either the '--API-file' or the '--API' argument must be provided in order for the program to work
 
