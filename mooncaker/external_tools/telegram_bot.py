@@ -1,11 +1,10 @@
 import logging
-from functools import partial
 
 from pymongo import MongoClient
 from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 from os import getcwd, path
-from mooncaker.__init__ import app,api_key_queue
+from mooncaker.__init__ import app, api_key_queue
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -14,12 +13,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 waiting_api_key_key = False
 
+
 # Define a few command handlers. These usually take the two arguments update and
 # context.
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
-    sticker= Sticker('CAACAgUAAxkBAAECjRVg5uYDQV50eYErYbW-52OzbJ9eWgACkh4AAsZRxhWMjlg7SAq03yAE','CAACAgUAAxkBAAECjRVg5uYDQV50eYErYbW-52OzbJ9eWgACkh4AAsZRxhWMjlg7SAq03yAE',512,512,False)
+    sticker = Sticker('CAACAgUAAxkBAAECjRVg5uYDQV50eYErYbW-52OzbJ9eWgACkh4AAsZRxhWMjlg7SAq03yAE',
+                      'CAACAgUAAxkBAAECjRVg5uYDQV50eYErYbW-52OzbJ9eWgACkh4AAsZRxhWMjlg7SAq03yAE', 512, 512, False)
     update.message.reply_sticker(sticker)
     update.message.reply_markdown_v2(
         fr'Hi {user.mention_markdown_v2()} onii\-chan\!',
@@ -36,14 +37,17 @@ def start(update: Update, context: CallbackContext) -> None:
 
     update.message.reply_text('How can I help you?', reply_markup=reply_markup)
 
+
 def button(update: Update, context: CallbackContext) -> None:
     """Parses the CallbackQuery and updates the message text."""
     query = update.callback_query
     query.answer()
     if query.data == '1':
-            query.edit_message_text(text=f"Available commands: \n /get_last_10_log \n /set_api_key \n /get_ReDiTi \n /get_count")
+        query.edit_message_text(
+            text=f"Available commands: \n /get_last_10_log \n /set_api_key \n /get_ReDiTi \n /get_count")
     else:
         query.edit_message_text(text=f"You are the best, onii-chan! I will always support you!")
+
 
 def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
@@ -58,7 +62,6 @@ def get_last_10_log(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(res)
 
 
-
 def set_api_key(update: Update, context: CallbackContext) -> None:
     global waiting_api_key
     waiting_api_key = True
@@ -71,6 +74,7 @@ def others(update: Update, context: CallbackContext) -> None:
         api_key_queue.put(update.message.text)
         waiting_api_key = False
 
+
 def get_ReDiTi(update: Update, context: CallbackContext) -> None:
     cluster = MongoClient("mongodb://datacaker:27017", connect=True)
     db = cluster.get_database("mooncaker")
@@ -78,15 +82,16 @@ def get_ReDiTi(update: Update, context: CallbackContext) -> None:
     rediti = [elem for elem in rediti.find()]
     update.message.reply_text(str(rediti))
 
+
 def get_count(update: Update, context: CallbackContext) -> None:
     cluster = MongoClient("mongodb://datacaker:27017", connect=True)
     db = cluster.get_database("mooncaker")
     m = db.get_collection("matches")
     update.message.reply_text(str(m.count_documents()))
 
-#TODO move get_count etc to dataCrawler
-def start_bot(token, set_api):
 
+# TODO move get_count etc to dataCrawler
+def start_bot(token):
     updater = Updater(token)
 
     # Get the dispatcher to register handlers
@@ -107,8 +112,10 @@ def start_bot(token, set_api):
     updater.start_polling()
     updater.idle()
 
+
 def main():
     pass
+
 
 if __name__ == '__main__':
     main()

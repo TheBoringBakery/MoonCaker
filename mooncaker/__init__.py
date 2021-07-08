@@ -50,7 +50,7 @@ DUMMY_API_KEY = "RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" #this key DOESN'T w
 crawling_process = Process(target=start_crawling, args=(DUMMY_API_KEY, api_key_queue.get,))
 crawling_process.start()
 logging.info("mooncaker: starting datacrawling")
-bot_process = Process(target=start_bot, args=(app.config['TELEGRAM_TOKEN'], api_key_queue.put,))
+bot_process = Process(target=start_bot, args=(app.config['TELEGRAM_TOKEN'],))
 bot_process.start()
 logging.info("mooncaker: starting telegram bot")
 
