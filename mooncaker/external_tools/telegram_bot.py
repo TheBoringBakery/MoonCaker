@@ -85,7 +85,7 @@ def get_count(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(str(m.count_documents()))
 
 #TODO move get_count etc to dataCrawler
-def start_bot(token, set_api) -> None:
+def start_bot(token, set_api):
 
     updater = Updater(token)
 
