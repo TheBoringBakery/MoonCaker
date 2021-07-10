@@ -3,21 +3,15 @@ version: '3.3'
 services:
     datacaker:
         build: ./mongodb
+        volumes: 
+            - db:/DataCaker
         expose:
             - 27017
 
     gunicorn:
         build: ./mooncaker
-        expose:
-            - 5000
-        ports:
-            - 587:587
-        depends_on:
-            - datacaker
-    nginx:
-        build: ./nginx
         ports:
             - 80:80
             - 443:443
         depends_on:
-            - gunicorn
+            - datacaker
