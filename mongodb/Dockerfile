@@ -8,4 +8,6 @@ RUN /install_db.sh
 
 EXPOSE 27017
 
+VOLUME [ "/DataCaker" ]
+
 CMD [ "mongod", "--dbpath", "/DataCaker/data", "--bind_ip", "0.0.0.0" ]

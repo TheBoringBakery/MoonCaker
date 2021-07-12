@@ -115,7 +115,7 @@ def clash_matches(watcher, region, names, sum_ids, get_key, db_matches):
     match_list = []
     big_region = REGION2BIG_REGION[region] 
     for encr_puuid in puuids:
-        command2call = partial(watcher.matchv5.matchlist_by_puuid, big_region, encr_puuid, queue=700, type=None, start=0, count=100)
+        command2call = partial(watcher.match.matchlist_by_puuid, big_region, encr_puuid, queue=700, type=None, start=0, count=100)
         is_successful, matches = safe_api_call(command2call, get_key)
         if is_successful:
             for match in matches:
@@ -212,13 +212,13 @@ def add_new_matches(lw, match_list, db_matches, region, get_key):
     for g_id in match_list:
 
         #get match by id
-        command2call = partial(lw.matchv5.by_id, big_region, g_id)
+        command2call = partial(lw.match.by_id, big_region, g_id)
         is_successful, match = safe_api_call(command2call, get_key)
         if not is_successful:
             continue #unlucky
 
         #get timeline to enstablish roles
-        command2call = partial(lw.matchv5.timeline_by_match, big_region, g_id)
+        command2call = partial(lw.match.timeline_by_match, big_region, g_id)
         is_successful, timeline = safe_api_call(command2call, get_key)
         if not is_successful:
             continue #unlucky part2
@@ -277,7 +277,7 @@ def start_crawling(API_KEY, get_key_blocking, db_url="mongodb://datacaker:27017"
     db_matches = db.get_collection("matches")
     to_crawl = get_uncrawled(db)
     db_rediti= db.get_collection("ReDiTi")
-    lol_watcher = LolWatcher(API_KEY)
+    lol_watcher = LolWatcher(API_KEY, default_default_match_v5=True)
     key_set = partial(set_new_key, lol_watcher, get_key_blocking)
     for elem in to_crawl:
         region = elem['region']
@@ -350,11 +350,11 @@ def main():
         division = random.choice(DIVISIONS)
         big_region = REGION2BIG_REGION[region]
         print(f"Connecting to lol API, crawling {region} {tier} {division}", flush=True)
-        watcher = LolWatcher(api_key=RIOT_API_KEY)
+        watcher = LolWatcher(api_key=RIOT_API_KEY, default_default_match_v5=True)
         get_key = partial(set_new_key, watcher, input)
         print("Connected", flush=True)
         print("Retrieving account info", flush=True)
-        names, sum_ids = summoner_names(watcher, region, tier, division, get_key)
+        names, sum_ids = summoner_names(watcher, region, tier, division, 1, get_key)
         if names is None or sum_ids is None:
             print("Was not able to retrieve accounts info")
             return
@@ -369,9 +369,9 @@ def main():
         print("Match list retrieved", flush=True)
         for g_id in match_list[:20]:
             print("Getting match by id", flush=True)
-            watcher.matchv5.by_id(big_region, g_id)
+            watcher.match.by_id(big_region, g_id)
             print("Got match by id", flush=True)
-            watcher.matchv5.timeline_by_match(big_region, g_id)
+            watcher.match.timeline_by_match(big_region, g_id)
             print("Successfully crawled one match", flush=True)
         print("Successfully crawled 20 matches", flush=True)
         return
