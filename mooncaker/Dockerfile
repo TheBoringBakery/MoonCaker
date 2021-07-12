@@ -1,20 +1,15 @@
-FROM python:3.7-alpine3.8
-
-RUN apk add --no-cache --virtual .build-deps gcc libc-dev \
-    && pip install gunicorn
+FROM galatolo/gunicorn-nginx:latest
 
 ADD . /mooncaker
+ADD ./.ssl /.ssl
 
-RUN chmod +x /mooncaker/start.sh
+
+ENV GUNICORN_CONFIG_FILE="/mooncaker/gunicorn.conf.py"
+ENV USE_TLS="true"
+ENV DOMAIN="theboringbakery.com"
+ENV MODULE_NAME="mooncaker"
+ENV PYTHONPATH="/mooncaker"
 
 RUN pip install --no-cache-dir -r /mooncaker/requirements.txt
-
 RUN chmod +x /mooncaker/install_riot_watcher.sh
-
 RUN /mooncaker/install_riot_watcher.sh
-
-EXPOSE 5000 587
-
-ENV PYTHONPATH=/mooncaker
-
-CMD [ "/mooncaker/start.sh" ]
