@@ -11,7 +11,7 @@ class Database():
         if db_url is not None:
             self.db = MongoClient(db_url, connect=True).get_database("mooncaker")
             self.db_matches = self.db.get_collection("matches")
-            self.db_rediti = self.db.get_collection("ReDiTi")  # todo: does it work if called before creation ?
+            self.db_rediti = self.db.get_collection("ReDiTi")
 
             self.set_rediti()
             self.to_crawl = [elem for elem in self.db_rediti.find({'crawled': False})]
@@ -40,7 +40,7 @@ class Database():
         self.set_rediti()
 
     def set_rediti(self):
-        if "ReDiTi" not in self.db.list_collection_names():
+        if self.db_rediti.count_documents([]) == 0:
             comb = [{'region': reg,
                      'tier': tier,
                      'division': div,
@@ -74,6 +74,6 @@ class Database():
         # game_ids = [match.get('gameId') for match in match_list]
         # game_ids = list(dict.fromkeys(game_ids))
         not_pres = [g_id for g_id in match_list
-                    if not self.db_matches.count_documents({"_id": g_id})]  # todo: explicit integer comparison
+                    if not self.db_matches.count_documents({"_id": g_id}) > 0]  # todo: explicit integer comparison
         not_pres = list(dict.fromkeys(not_pres))
         return not_pres
