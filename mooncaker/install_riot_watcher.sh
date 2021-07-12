@@ -6,3 +6,4 @@ cd Riot-Watcher-master
 python setup.py install
 cd ..
 rm -r -f Riot-Watcher-master/
+rm master.zip
