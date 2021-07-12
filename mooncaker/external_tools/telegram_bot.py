@@ -1,20 +1,30 @@
 from functools import partial
 from pymongo import MongoClient
 from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
-from os import getcwd, path, remove
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler, \
+    ConversationHandler
+from os import remove
 
-waiting_api_key_key = False
+WAITING_API = 0
+SAD_ZOE = 'CAACAgIAAxkBAAECkWNg7Fo-k6squNhgN_2bLL2X3F6DhQACWwADsiFfFVNQKDUCqm9IIAQ'
+MEGUMIN_THUMB_UP = 'CAACAgUAAxkBAAECkXNg7GRAgV-Bw0QddeuTXXLcS_WV7gACnBwAAsZRxhXGsrj-QloNWyAE'
+PARTY_GIRL = 'CAACAgUAAxkBAAECkXFg7GNN3M6hwcJb21P74JELHq0mHQACpxwAAsZRxhXfhZz2U_6oByAE'
+LOLI = 'CAACAgUAAxkBAAECjRVg5uYDQV50eYErYbW-52OzbJ9eWgACkh4AAsZRxhWMjlg7SAq03yAE'
+NAME_TO_STICKER = {name: Sticker(name, name, 512, 512, False) for name in [SAD_ZOE, MEGUMIN_THUMB_UP, PARTY_GIRL, LOLI]}
 
 
-# Define a few command handlers. These usually take the two arguments update and
-# context.
+def authorize_and_dispatch(update: Update, context: CallbackContext, dispatcher, whitelist):
+    if update.effective_user.username in whitelist.split():
+        return dispatcher(update=update, context=context)
+    else:
+        update.message.reply_sticker(NAME_TO_STICKER[SAD_ZOE])
+        update.message.reply_text("Sorry, you cannot do that")
+
+
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
-    sticker = Sticker('CAACAgUAAxkBAAECjRVg5uYDQV50eYErYbW-52OzbJ9eWgACkh4AAsZRxhWMjlg7SAq03yAE',
-                      'CAACAgUAAxkBAAECjRVg5uYDQV50eYErYbW-52OzbJ9eWgACkh4AAsZRxhWMjlg7SAq03yAE', 512, 512, False)
-    update.message.reply_sticker(sticker)
+    update.message.reply_sticker(NAME_TO_STICKER[LOLI])
     update.message.reply_markdown_v2(
         fr'Hi {user.mention_markdown_v2()} onii\-chan\!',
         reply_markup=ForceReply(selective=True),
@@ -62,32 +72,36 @@ def get_log(update: Update, context: CallbackContext, log_filename, lines=None) 
                                       filename="full_log.txt")
 
 
-def set_api_key(update: Update, context: CallbackContext) -> None:
-    global waiting_api_key
-    waiting_api_key = True
-    update.message.reply_text(f"Gimme the new API key")
+def set_api_key_req(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text(
+        f"Please gimme all your new API key, I want it so bad..or use /cancel to make me stop waiting..")
+    return WAITING_API
 
 
-def others(update: Update, context: CallbackContext, set_api) -> None:
-    global waiting_api_key
-    if waiting_api_key:
-        set_api(update.message.text)
-        waiting_api_key = False
+def set_new_api(update: Update, context: CallbackContext, set_api) -> None:
+    new_api = update.message.text
+    if len(new_api) != 42:
+        update.message.reply_sticker(NAME_TO_STICKER[SAD_ZOE])
+        update.message.reply_text('Why r u tryin to troll me, insert a valid key baka')
+        return WAITING_API
+    set_api(update.message.text)
+    update.message.reply_sticker(NAME_TO_STICKER[PARTY_GIRL])
+    update.message.reply_text(f"New API key set! Hurray!")
+    return ConversationHandler.END
 
 
 def get_ReDiTi(update: Update, context: CallbackContext) -> None:
     cluster = MongoClient("mongodb://datacaker:27017", connect=True)
     db = cluster.get_database("mooncaker")
     rediti = db.get_collection("ReDiTi")
-    elems = rediti.find({},{'_id': 0})
+    elems = rediti.find({}, {'_id': 0})
     with open('rediti.txt', 'a') as res:
         for elem in elems:
-            res.write(str(elem)+"\n")
+            res.write(str(elem) + "\n")
     with open('rediti.txt', 'r') as out:
         context.bot.send_document(chat_id=update.effective_chat.id, document=out,
                                   filename="rediti.txt")
     remove('rediti.txt')
-
 
 
 def get_count(update: Update, context: CallbackContext) -> None:
@@ -97,29 +111,47 @@ def get_count(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(str(m.count_documents({})))
 
 
+def canc_key_wait(update: Update, context: CallbackContext):
+    update.message.reply_sticker(NAME_TO_STICKER[MEGUMIN_THUMB_UP])
+    update.message.reply_text(f'Okidoki! Not waiting for key anymore!')
+    return ConversationHandler.END
+
+
 # TODO move get_count etc to dataCrawler
-def start_bot(token, set_api, log_name) -> None:
+def start_bot(token, set_api, log_name, whitelist) -> None:
     updater = Updater(token)
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
 
     # on different commands - answer in Telegram
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("help", help_command))
+    part_auth_dispatch = partial(authorize_and_dispatch, whitelist= whitelist)
+    part = partial(part_auth_dispatch, dispatcher=start)
+    dispatcher.add_handler(CommandHandler("start", part))
+    part = partial(part_auth_dispatch, dispatcher=help_command)
+    dispatcher.add_handler(CommandHandler("help", part))
     updater.dispatcher.add_handler(CallbackQueryHandler(button))
-    part_last_10 = partial(get_log, log_filename=log_name, lines= 10)
-    dispatcher.add_handler(CommandHandler("get_last_10_log", part_last_10))
+    part_last_10 = partial(get_log, log_filename=log_name, lines=10)
+    part = partial(part_auth_dispatch, dispatcher=part_last_10)
+    dispatcher.add_handler(CommandHandler("get_last_10_log", part))
     part_log = partial(get_log, log_filename=log_name)
-    dispatcher.add_handler(CommandHandler("get_full_log", part_log))
-    dispatcher.add_handler(CommandHandler("set_api_key", set_api_key))
-    dispatcher.add_handler(CommandHandler("get_ReDiTi", get_ReDiTi))
-    dispatcher.add_handler(CommandHandler("get_count", get_count))
-
-    partial_set_api = partial(others, set_api=set_api)
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, partial_set_api))
-
-    # Start the Bot
+    part = partial(part_auth_dispatch, dispatcher=part_log)
+    dispatcher.add_handler(CommandHandler("get_full_log", part))
+    part = partial(part_auth_dispatch, dispatcher=set_api_key_req)
+    partial_set_api = partial(set_new_api, set_api=set_api)
+    part_set = partial(part_auth_dispatch, dispatcher=partial_set_api)
+    set_key_handler = ConversationHandler(entry_points=[CommandHandler('set_api_key', part)],
+                                          states={
+                                              WAITING_API: [
+                                                  MessageHandler(Filters.text & ~Filters.command, part_set)
+                                              ]
+                                          },
+                                          fallbacks=[CommandHandler('cancel', canc_key_wait)])
+    dispatcher.add_handler(set_key_handler)
+    part = partial(part_auth_dispatch, dispatcher=get_ReDiTi)
+    dispatcher.add_handler(CommandHandler("get_ReDiTi", part))
+    part = partial(part_auth_dispatch, dispatcher=get_count)
+    dispatcher.add_handler(CommandHandler("get_count", part))
     updater.start_polling()
     updater.idle()
 
