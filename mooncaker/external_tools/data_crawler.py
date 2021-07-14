@@ -8,7 +8,7 @@ import re
 import time
 import logging
 from riotwatcher import LolWatcher, ApiError
-from external_tools import REGIONS, REGION2BIG_REGION, TIERS, DIVISIONS
+from external_tools import REGION2BIG_REGION
 from external_tools.db_interactor import Database
 
 # todo: add conccurent requests were possible to speed things up
@@ -19,10 +19,10 @@ class Crawler():
     def __init__(self,
                  API_KEY,
                  get_key_blocking,
-                 db_url=None):
+                 db_url="mongodb://datacaker:27017"):
 
         self.db = Database(db_url)
-        self.watcher = LolWatcher(API_KEY, default_default_match_v5=True)
+        self.watcher = LolWatcher(API_KEY, default_match_v5=True)
         self.get_new_key = get_key_blocking
 
     def safe_api_call(self, command, retry_count=3):
@@ -126,7 +126,7 @@ class Crawler():
                 for match in matches:
                     match_list.append(match)
 
-        match_list = list(filter(None, match_list)) # todo: might not be needed anymore
+        match_list = list(filter(None, match_list))  # todo: might not be needed anymore
         return self.db.filter_duplicates(match_list)
 
     # returns list of account infos: summoner name,summoner Id, account Id

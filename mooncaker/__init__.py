@@ -8,7 +8,7 @@ from flask_talisman import Talisman
 from dotenv import load_dotenv
 from os import environ
 from multiprocessing import Process, Queue
-from mooncaker.external_tools.data_crawler import start_crawling
+from mooncaker.external_tools.data_crawler import Crawler
 from mooncaker.external_tools.telegram_bot import start_bot
 import logging
 
@@ -46,16 +46,18 @@ mail = Mail(app)
 Bootstrap(app)
 
 api_key_queue = Queue()
-DUMMY_API_KEY = "RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"  # this key DOESN'T work but it's needed to start the
-# process.
+DUMMY_API_KEY = "RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"  # this key DOESN'T work but it's needed to start the process.
 # TODO (low): can we avoid using the above key ?
 
-crawling_process = Process(target=start_crawling, args=(DUMMY_API_KEY, api_key_queue.get,))
+crawler = Crawler(DUMMY_API_KEY, api_key_queue.get)
+crawling_process = Process(target=crawler.start_crawling)
 crawling_process.start()
 logging.info("mooncaker: starting datacrawling")
-bot_process = Process(target=start_bot, args=(
-app.config['TELEGRAM_TOKEN'], api_key_queue.put, path.join(getcwd(), app.config['LOG_FILENAME']),
-app.config['TELEGRAM_WHITELIST'],))
+bot_process = Process(target=start_bot,
+                      args=(app.config['TELEGRAM_TOKEN'],
+                            api_key_queue.put,
+                            path.join(getcwd(), app.config['LOG_FILENAME']),
+                            app.config['TELEGRAM_WHITELIST'],))
 bot_process.start()
 logging.info("mooncaker: starting telegram bot")
 

@@ -7,7 +7,7 @@ from external_tools import REGIONS, TIERS, DIVISIONS
 
 class Database():
 
-    def __init__(self, db_url="mongodb://datacaker:27017"):
+    def __init__(self, db_url=None):
         if db_url is not None:
             self.db = MongoClient(db_url, connect=True).get_database("mooncaker")
             self.db_matches = self.db.get_collection("matches")
