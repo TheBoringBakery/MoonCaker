@@ -4,8 +4,8 @@ from flask_mail import Message
 from os import getcwd, path, environ
 import hashlib
 import logging
-from mooncaker.forms import AdminForm, ConsoleForm
-from mooncaker import app, mail, api_key_queue
+from flask_app.forms import AdminForm, ConsoleForm
+from flask_app import app, mail, api_key_queue
 
 # set REST API
 # @deprecated
