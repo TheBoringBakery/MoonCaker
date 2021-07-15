@@ -2,7 +2,7 @@
     This file is responsible for the interaction with the mongo db
 """
 from pymongo import MongoClient
-from external_tools import REGIONS, TIERS, DIVISIONS
+from . import REGIONS, TIERS, DIVISIONS
 
 
 class Database():

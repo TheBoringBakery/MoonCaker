@@ -8,8 +8,8 @@ import re
 import time
 import logging
 from riotwatcher import LolWatcher, ApiError
-from external_tools import REGION2BIG_REGION
-from external_tools.db_interactor import Database
+from . import REGION2BIG_REGION
+from .db_interactor import Database
 
 # todo: add conccurent requests were possible to speed things up
 
@@ -85,8 +85,8 @@ class Crawler():
             is_successful, user = self.safe_api_call(command2call)
             if is_successful:
                 ids.append(user.get('puuid'))
-            # else:
-            #     ids.append(None) # todo: why is this ? - was present in previous version
+            else:
+                ids.append(None)
         return ids
 
     def clash_matches(self, region, names, sum_ids):
