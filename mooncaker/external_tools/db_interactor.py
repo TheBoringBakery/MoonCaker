@@ -40,7 +40,7 @@ class Database():
         self.set_rediti()
 
     def set_rediti(self):
-        if self.db_rediti.count_documents([]) == 0:
+        if self.db_rediti.count_documents({}) == 0:
             comb = [{'region': reg,
                      'tier': tier,
                      'division': div,
