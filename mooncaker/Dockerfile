@@ -1,4 +1,4 @@
-FROM galatolo/gunicorn-nginx:latest
+FROM galatolo/gunicorn-nginx:python3.7-alpine
 
 ADD . /mooncaker
 ADD ./.ssl /.ssl
