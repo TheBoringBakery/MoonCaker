@@ -47,7 +47,7 @@ def send_suggestion():
     msg = Message(subject="Mooncaker: suggestion made",
                   body=text,
                   sender=app.config['MAIL_USERNAME'],
-                  recipients=app.config['MAIL_RECIPIENTS'].split(" "))
+                  recipients=app.config['MAIL_RECIPIENTS'])
     mail.send(msg)
     logging.info("mooncaker: the suggestion was successfully sent")
     return redirect("https://mooncaker.theboringbakery.com/#/response_suggestion", code=301)
@@ -90,9 +90,9 @@ def console():
         form = ConsoleForm()
         string_back = parse_command("help", [])
         if form.validate_on_submit():
-            string_back = 'Something when wrong parsing your command. Please report to the admins' #string to send back
+            string_back = 'Something when wrong parsing your command. Please report to the admins' # string to send back
             command = str(form.command.data).split()[0].lower()
-            args = str(form.command.data).split()[1:] #remove first command
+            args = str(form.command.data).split()[1:]  # remove first command
             string_back = parse_command(command, args)
             string_back += "<br>"
         return render_template('console.html', form=form, response=string_back)

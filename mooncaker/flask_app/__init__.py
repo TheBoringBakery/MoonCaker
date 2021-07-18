@@ -1,16 +1,15 @@
-from os import path, getcwd
-
+from os import path, getcwd, environ
+import logging
+from threading import Thread
+from multiprocessing import Process, Queue
 from flask import Flask
 from flask_restful import Api
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail, Message
 from flask_talisman import Talisman
 from dotenv import load_dotenv
-from os import environ
-from multiprocessing import Process, Queue
 from external_tools.data_crawler import Crawler
 from external_tools.telegram_bot import start_bot
-import logging
 
 app = Flask(__name__)
 api = Api(app)
@@ -31,7 +30,7 @@ try:
     app.config['MAIL_SERVER'] = environ['mail-server']
     app.config['MAIL_USERNAME'] = environ['mail-user']
     app.config['MAIL_PASSWORD'] = environ['mail-pass']
-    app.config['MAIL_RECIPIENTS'] = environ['mail-recipients']
+    app.config['MAIL_RECIPIENTS'] = environ['mail-recipients'].split(" ")
     app.config['SECRET_KEY'] = environ['secret-key']
     app.config['SALT'] = environ['hash-salt'].encode('latin1').decode('unicode-escape').encode('latin1')
     app.config['ADMIN_USER'] = environ['admin-user']
@@ -46,15 +45,17 @@ except KeyError:
 mail = Mail(app)
 Bootstrap(app)
 
-api_key_queue = Queue()
+api_key_queue = Queue()  # Where the new API key will be put
 
 
 def get_api_key():
-    msg = Message(subject="Mooncaker needs your attention",
-                  body="Notice me senpai, I need a new API key!",
-                  sender=app.config['MAIL_USERNAME'],
-                  recipients=app.config['MAIL_RECIPIENTS'])
-    mail.send(msg)
+    with app.app_context():
+        msg = Message(subject="Mooncaker needs your attention",
+                      body="Notice me senpai, I need a new API key!",
+                      sender=app.config['MAIL_USERNAME'],
+                      recipients=app.config['MAIL_RECIPIENTS'])
+        mail.send(msg)
+    logging.info("mooncaker: signal email sent")
     return api_key_queue.get()
 
 
