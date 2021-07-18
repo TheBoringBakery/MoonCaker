@@ -48,14 +48,14 @@ class Crawler():
                 result = command()
                 call_is_successful = True
             except ApiError as err:
-                if err.response.status_code == 404:
-                    logging.warning(f"datacrawler: Received a 404 status code with the following arguments")
-                elif err.response.status_code == 403:
-                    logging.warning(f"datacrawler: Received a 403 status code, waiting new API")
+                if err.response.status_code == 403:
+                    logging.warning("datacrawler: Received a 403 status code, waiting new API")
                     logging.debug("datacrawler: going to possibly hang while waiting new api key")
                     new_key = self.get_new_key()
                     self.watcher = LolWatcher(new_key, default_match_v5=True)
-                    logging.debug(f"datacrawler: received new api key ending with {new_key[-5:]}")  # todo: is it bad to hang inside except?
+                    logging.debug(f"datacrawler: received new api key ending with {new_key[-5:]}")
+                elif err.response.status_code == 404:
+                    logging.warning("datacrawler: Received a 404 status code with the following arguments")
                 elif err.response.status_code == 429:
                     # todo: how many is too many ?
                     logging.warning("datacrawler: Received a 429 status code, too many same type requests, sleeping for 60s")
@@ -66,7 +66,7 @@ class Crawler():
                 return self.safe_api_call(command, retry_count - 1)
         return call_is_successful, result
 
-    # gets account Ids of given summoners, returning None for accounts not found (che cazzo ne so anche se li ho appena fetchati dalla lega non li trova)
+    # gets account Ids of given summoners, returning None for accounts not found
     def acc_id_by_sum_name(self, region, summoner_names):
         """
             Fetch accountIds for each summoner name and returns them as a list
