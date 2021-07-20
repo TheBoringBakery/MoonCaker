@@ -1,16 +1,15 @@
-from os import path, getcwd
-
+from os import path, getcwd, environ
+import logging
+from threading import Thread
+from multiprocessing import Process, Queue
 from flask import Flask
 from flask_restful import Api
 from flask_bootstrap import Bootstrap
-from flask_mail import Mail
+from flask_mail import Mail, Message
 from flask_talisman import Talisman
 from dotenv import load_dotenv
-from os import environ
-from multiprocessing import Process, Queue
 from external_tools.data_crawler import Crawler
 from external_tools.telegram_bot import start_bot
-import logging
 
 from mooncaker.external_tools.mooncaker_bot import MooncakerBot
 
@@ -33,6 +32,7 @@ try:
     app.config['MAIL_SERVER'] = environ['mail-server']
     app.config['MAIL_USERNAME'] = environ['mail-user']
     app.config['MAIL_PASSWORD'] = environ['mail-pass']
+    app.config['MAIL_RECIPIENTS'] = environ['mail-recipients'].split(" ")
     app.config['SECRET_KEY'] = environ['secret-key']
     app.config['SALT'] = environ['hash-salt'].encode('latin1').decode('unicode-escape').encode('latin1')
     app.config['ADMIN_USER'] = environ['admin-user']
@@ -47,11 +47,21 @@ except KeyError:
 mail = Mail(app)
 Bootstrap(app)
 
-api_key_queue = Queue()
-DUMMY_API_KEY = "RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"  # this key DOESN'T work but it's needed to start the process.
-# TODO (low): can we avoid using the above key ?
+api_key_queue = Queue()  # Where the new API key will be put
 
-crawler = Crawler(DUMMY_API_KEY, api_key_queue.get)
+
+def get_api_key():
+    with app.app_context():
+        msg = Message(subject="Mooncaker needs your attention",
+                      body="Notice me senpai, I need a new API key!",
+                      sender=app.config['MAIL_USERNAME'],
+                      recipients=app.config['MAIL_RECIPIENTS'])
+        mail.send(msg)
+    logging.info("mooncaker: signal email sent")
+    return api_key_queue.get()
+
+
+crawler = Crawler("NotAnAPIKey", get_api_key)
 crawling_process = Process(target=crawler.start_crawling)
 crawling_process.start()
 logging.info("mooncaker: starting datacrawling")

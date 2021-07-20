@@ -1,7 +1,7 @@
-from flask import  redirect, session, render_template, url_for, g, request
+from flask import redirect, session, render_template, url_for, g, request
 from flask_restful import Resource
 from flask_mail import Message
-from os import getcwd, path, environ
+from os import getcwd, path
 import hashlib
 import logging
 from flask_app.forms import AdminForm, ConsoleForm
@@ -16,7 +16,7 @@ from flask_app import app, mail, api_key_queue
 #             API_KEY = request.form['data']
 #             logging.info("Received a new API key")
 #             api_condition.notify()
-        
+
 #         return {"result": "ok"}
 
 
@@ -29,9 +29,11 @@ def before_request():
     if 'user' in session:
         g.user = session['user']
 
+
 @app.route('/')
 def hello_world():
     return redirect("https://mooncaker.theboringbakery.com", code=302)
+
 
 @app.route('/send_suggestion/', methods=['POST'])
 def send_suggestion():
@@ -42,14 +44,13 @@ def send_suggestion():
         return "<h1>We are sorry but we cannot validate the origin of this request, please visit theboringbakery.com for the correct interaction.</h1>"
 
     text = str(request.form)
-    msg = Message(subject="A suggestion was submitted for Mooncaker!",
+    msg = Message(subject="Mooncaker: suggestion made",
                   body=text,
-                  sender=environ['mail-user'],
-                  recipients=environ['mail-recipients'].split(" "))
+                  sender=app.config['MAIL_USERNAME'],
+                  recipients=app.config['MAIL_RECIPIENTS'])
     mail.send(msg)
     logging.info("mooncaker: the suggestion was successfully sent")
-    #todo: return page with happy zoe and thanks for suggestion, then redirect after 2 seconds
-    return "<h1>Thank you!</h1>"
+    return redirect("https://mooncaker.theboringbakery.com/#/response_suggestion", code=301)
 
 
 @app.route("/admin/", methods=['GET', 'POST'])
@@ -89,9 +90,9 @@ def console():
         form = ConsoleForm()
         string_back = parse_command("help", [])
         if form.validate_on_submit():
-            string_back = 'Something when wrong parsing your command. Please report to the admins' #string to send back
+            string_back = 'Something when wrong parsing your command. Please report to the admins' # string to send back
             command = str(form.command.data).split()[0].lower()
-            args = str(form.command.data).split()[1:] #remove first command
+            args = str(form.command.data).split()[1:]  # remove first command
             string_back = parse_command(command, args)
             string_back += "<br>"
         return render_template('console.html', form=form, response=string_back)
