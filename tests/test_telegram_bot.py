@@ -3,14 +3,12 @@ import datetime
 import pytest
 from mooncaker.external_tools.mooncaker_bot import MooncakerBot
 from multiprocessing import Queue
-from telegram.ext import CallbackContext, Dispatcher
 from telegram import Update, User, Message, Chat
-import telegram
 
 
 @pytest.fixture()
 def bot():
-    return MooncakerBot('not_a_token', None, 'not_a_path', 'not_a_whitelist')
+    return MooncakerBot('not_a_token', None, 'not_a_path', 'not_a_whitelist',None)
 
 
 def mock_dispatcher(update, context):
@@ -70,7 +68,7 @@ class TestApiKeySet:
         len_after = self.api_queue.qsize()
         assert (len_after == len_before)
 
-    def test_not_alphanum_dash_ley(self, bot, mock_reply_sticker, mock_reply_text):
+    def test_not_alphanum_dash(self, bot, mock_reply_sticker, mock_reply_text):
         self.update.message.__setattr__('text', 'aaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaa.aa')
         len_before = self.api_queue.qsize()
         bot.set_new_api(self.update, None, self.api_queue.put)
