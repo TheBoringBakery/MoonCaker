@@ -8,9 +8,7 @@ from flask_bootstrap import Bootstrap
 from flask_mail import Mail, Message
 from flask_talisman import Talisman
 from dotenv import load_dotenv
-from external_tools.data_crawler import Crawler
-from external_tools.telegram_bot import start_bot
-
+from mooncaker.external_tools.data_crawler import Crawler
 from mooncaker.external_tools.mooncaker_bot import MooncakerBot
 
 app = Flask(__name__)
@@ -70,5 +68,3 @@ bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],api_key_queue.put,path.join(getc
 bot_process = Process(target=bot.start_bot)
 bot_process.start()
 logging.info("mooncaker: starting telegram bot")
-
-from flask_app import routes
