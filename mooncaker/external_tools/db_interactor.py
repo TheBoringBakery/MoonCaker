@@ -77,3 +77,9 @@ class Database():
                     if not self.db_matches.count_documents({"_id": g_id}) > 0]  # todo: explicit integer comparison
         not_pres = list(dict.fromkeys(not_pres))
         return not_pres
+
+    def count_matches(self):
+        return self.db_matches.count_documents({})
+
+    def get_rediti(self):
+        return self.db_rediti.find({}, {'_id': 0})

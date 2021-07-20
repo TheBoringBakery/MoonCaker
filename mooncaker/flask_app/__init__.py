@@ -12,6 +12,8 @@ from external_tools.data_crawler import Crawler
 from external_tools.telegram_bot import start_bot
 import logging
 
+from mooncaker.external_tools.mooncaker_bot import MooncakerBot
+
 app = Flask(__name__)
 api = Api(app)
 # Talisman(app, force_https=False)
@@ -53,11 +55,9 @@ crawler = Crawler(DUMMY_API_KEY, api_key_queue.get)
 crawling_process = Process(target=crawler.start_crawling)
 crawling_process.start()
 logging.info("mooncaker: starting datacrawling")
-bot_process = Process(target=start_bot,
-                      args=(app.config['TELEGRAM_TOKEN'],
-                            api_key_queue.put,
-                            path.join(getcwd(), app.config['LOG_FILENAME']),
-                            app.config['TELEGRAM_WHITELIST'],))
+bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],api_key_queue.put,path.join(getcwd(), app.config['LOG_FILENAME']),
+                            app.config['TELEGRAM_WHITELIST'])
+bot_process = Process(target=bot.start_bot)
 bot_process.start()
 logging.info("mooncaker: starting telegram bot")
 
