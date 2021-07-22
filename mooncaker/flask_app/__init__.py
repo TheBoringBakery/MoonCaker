@@ -49,9 +49,18 @@ api_key_queue = Queue()  # Where the new API key will be put
 
 
 def get_api_key():
+    """
+    Function that get called when a new api key is required
+    It sends an email to warn the admins of this need and hangs
+    waiting for a new key
+
+    Returns:
+        str: the new api key
+    """
     with app.app_context():
         msg = Message(subject="Mooncaker needs your attention",
-                      body="Notice me senpai, I need a new API key!",
+                      body="Notice me senpai, I need a new API key!\n"
+                      + "A quick link for you! https://developer.riotgames.com/",
                       sender=app.config['MAIL_USERNAME'],
                       recipients=app.config['MAIL_RECIPIENTS'])
         mail.send(msg)

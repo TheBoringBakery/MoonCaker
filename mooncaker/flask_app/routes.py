@@ -49,6 +49,16 @@ def send_suggestion():
                   sender=app.config['MAIL_USERNAME'],
                   recipients=app.config['MAIL_RECIPIENTS'])
     mail.send(msg)
+    # send automatic response
+    msg = Message(subject="Mooncaker: thanks for your suggestion!",
+                  body=f"Dear {request.form['username']},\n"
+                  + f"we've received your suggestion about {request.form['reason']}.\n"
+                  + "We really value your feedback and we'll do our best to "
+                  + "follow all of your suggestions in the shortest amount of time possible."
+                  + "Kind regards,\n The Mooncaker developers team",
+                  sender=app.config['MAIL_USERNAME'],
+                  recipients=request.form['email'])
+    mail.send(msg)
     logging.info("mooncaker: the suggestion was successfully sent")
     return redirect("https://mooncaker.theboringbakery.com/#/response_suggestion", code=301)
 
@@ -71,6 +81,7 @@ def admin():
 
     return render_template("admin.html", form=form)
 
+
 def parse_command(command, args):
     #todo: implement database queries
     if command == "set-api-key":
@@ -83,6 +94,7 @@ def parse_command(command, args):
     elif command == "help":
         return "Currently available commands are: <br> set-api-key [key] <br> get-log <br>"
     return 'Something when wrong parsing your command. Please report to the admins'
+
 
 @app.route('/console/', methods=['GET', 'POST'])
 def console():
