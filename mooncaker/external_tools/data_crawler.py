@@ -127,7 +127,7 @@ class Crawler():
                     match_list.append(match)
 
         match_list = list(filter(None, match_list))  # todo: might not be needed anymore
-        return self.db.filter_duplicates(match_list)
+        return self.db.filter_match_duplicates(match_list)
 
     # returns list of account infos: summoner name,summoner Id, account Id
     def summoner_names(self, region, tier, division, page, mode='RANKED_SOLO_5x5'):
@@ -269,15 +269,7 @@ def main():
     parser.add_argument('--API-file', help='the filename with the riot API key')
     parser.add_argument('--API', help='the riot API key')
     parser.add_argument('--db-url', help='the url of the mongo db, default is localhost')
-    parser.add_argument('--test-api', help='if given it will only test the connection to riot API without the database',
-                        action='store_true')
-    parser.add_argument('--test-db', help='if given it will only test the database without accessing the api',
-                        action='store_true')
     args = vars(parser.parse_args())
-
-    if args['test_db'] is True:
-        # todo: test the database
-        return
 
     # Check avilability of API key
     if args['API'] is None and args['API_file'] is None:
@@ -296,24 +288,6 @@ def main():
         except FileNotFoundError:
             print("Couldn't find the specified file with the RIOT API key, please check again")
             return
-
-    if args['test_api'] is True:
-        # test only api connection without db
-        crawler = Crawler(RIOT_API_KEY, input)
-        for id, region, tier, division, page in crawler.db.ranks2crawl():
-            logging.info(f"datacrawler: Crawling {region}, {tier}, {division}, {page}")
-            names, sum_ids = crawler.summoner_names(region, tier, division, page)
-
-            # retrieve matches by batches of summoner names
-            batch_size = 100
-            for index in range(0, batch_size+1, batch_size):
-                batch_names = names[index: min(index+batch_size, len(names))]
-                match_list = crawler.clash_matches(region,
-                                                   batch_names,
-                                                   sum_ids)
-                match_docs = crawler.match_details(match_list, region)
-                crawler.db.insert_match_page(id, match_docs, page)
-        return
 
     db_url = "mongodb://localhost:27017" if args['db_url'] is None else args['db_url']
 

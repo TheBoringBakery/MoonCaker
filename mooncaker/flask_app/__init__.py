@@ -63,8 +63,11 @@ crawler = Crawler("NotAnAPIKey", get_api_key)
 crawling_process = Process(target=crawler.start_crawling)
 crawling_process.start()
 logging.info("mooncaker: starting datacrawling")
-bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],api_key_queue.put,path.join(getcwd(), app.config['LOG_FILENAME']),
-                            app.config['TELEGRAM_WHITELIST'])
+bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],
+                   api_key_queue.put,
+                   path.join(getcwd(), app.config['LOG_FILENAME']),
+                   app.config['TELEGRAM_WHITELIST'])
+
 bot_process = Process(target=bot.start_bot)
 bot_process.start()
 logging.info("mooncaker: starting telegram bot")
