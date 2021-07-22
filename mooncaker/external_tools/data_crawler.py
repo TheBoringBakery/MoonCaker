@@ -11,7 +11,7 @@ from riotwatcher import LolWatcher, ApiError
 from . import REGION2BIG_REGION
 from .db_interactor import Database
 
-# todo: add conccurent requests were possible to speed things up
+# todo: add conccurent requests where possible to speed things up
 
 
 class Crawler():
@@ -25,14 +25,14 @@ class Crawler():
         self.watcher = LolWatcher(API_KEY, default_match_v5=True)
         self.get_new_key = get_key_blocking
 
-    def safe_api_call(self, command, retry_count=3):
+    def safe_api_call(self, attributes, args, retry_count=3):
         """calls the given command and checks for the successful outcome
         If the outcome is not successful, it intercepts the error and based on
         that will either retry (up to 3 times) or return unsuccessful status
 
         Args:
-            command (fun): a callable of the api to exec which was already
-                           given the arguments needed (use partial)
+            attributes (list(str)): a list string with the names of the attributes of the api to exec
+            args (tuple): the arguments to pass to the function
             redo_count (int, optional): used internally to count how many times
                                         the call has been retried.
                                         Defaults to 3.
@@ -45,7 +45,10 @@ class Crawler():
         if retry_count > 0:
             # redo call in case of errors up to x times
             try:
-                result = command()
+                command = getattr(self.watcher, attributes[0])
+                for attribute in attributes[1:]:
+                    command = getattr(command, attribute)
+                result = command(*args)
                 call_is_successful = True
             except ApiError as err:
                 if err.response.status_code == 403:
@@ -63,7 +66,7 @@ class Crawler():
                 else:
                     logging.warning(f"datacrawler: Received a {err.response.status_code} status code")
             if not call_is_successful:
-                return self.safe_api_call(command, retry_count - 1)
+                return self.safe_api_call(attributes, args, retry_count - 1)
         return call_is_successful, result
 
     # gets account Ids of given summoners, returning None for accounts not found
@@ -80,9 +83,9 @@ class Crawler():
         """
         ids = []
         for name in summoner_names:
-            command2call = partial(self.watcher.summoner.by_name, region, name)
             # todo: check when 404 maybe name has changed
-            is_successful, user = self.safe_api_call(command2call)
+            is_successful, user = self.safe_api_call(["summoner", "by_name"], 
+                                                     (region, name))
             if is_successful:
                 ids.append(user.get('puuid'))
             else:
@@ -114,14 +117,13 @@ class Crawler():
         match_list = []
         big_region = REGION2BIG_REGION[region] 
         for encr_puuid in puuids:
-            command2call = partial(self.watcher.match.matchlist_by_puuid,
-                                   big_region,
-                                   encr_puuid,
-                                   queue=700,
-                                   type=None,
-                                   start=0,
-                                   count=100)
-            is_successful, matches = self.safe_api_call(command2call)
+            is_successful, matches = self.safe_api_call(['match', "matchlist_by_puuid"],
+                                                        (big_region,
+                                                         encr_puuid,
+                                                         700,
+                                                         None,
+                                                         0,
+                                                         100))
             if is_successful:
                 for match in matches:
                     match_list.append(match)
@@ -143,8 +145,12 @@ class Crawler():
             Returns:
                 List(str), List(str): list of players' summoner name and summonerId belonging to the given tier,division,region
         """
-        command2call = partial(self.watcher.league.entries, region, mode, tier, division, page)
-        is_successful, players_list = self.safe_api_call(command2call)
+        is_successful, players_list = self.safe_api_call(['league', 'entries'],
+                                                         (region,
+                                                          mode,
+                                                          tier,
+                                                          division,
+                                                          page))
         if is_successful and players_list:
             return [summoner.get('summonerName') for summoner in players_list], \
                    [summoner.get('summonerId') for summoner in players_list]
@@ -191,14 +197,16 @@ class Crawler():
         for g_id in match_list:
 
             # get match by id
-            command2call = partial(self.watcher.match.by_id, big_region, g_id)
-            is_successful, match = self.safe_api_call(command2call)
+            is_successful, match = self.safe_api_call(['match', 'by_id'],
+                                                      (big_region,
+                                                       g_id))
             if not is_successful:
                 continue  # unlucky
 
             # get timeline to enstablish roles
-            command2call = partial(self.watcher.match.timeline_by_match, big_region, g_id)
-            is_successful, timeline = self.safe_api_call(command2call)
+            is_successful, timeline = self.safe_api_call(['match', 'timeline_by_match'],
+                                                         (big_region,
+                                                          g_id))
             if not is_successful:
                 continue  # unlucky part2
 
@@ -260,40 +268,3 @@ class Crawler():
                         self.db.insert_match_page(id, match_docs, page)
         logging.info('datacrawler: Finished crawling, resetting rediti and starting again')
         self.db.reset_rediti()
-
-
-def main():
-    logging.basicConfig(level=logging.DEBUG)
-    # parse arguments in order to get the riot API
-    parser = argparse.ArgumentParser(description='Crawls some lol data about clash')
-    parser.add_argument('--API-file', help='the filename with the riot API key')
-    parser.add_argument('--API', help='the riot API key')
-    parser.add_argument('--db-url', help='the url of the mongo db, default is localhost')
-    args = vars(parser.parse_args())
-
-    # Check avilability of API key
-    if args['API'] is None and args['API_file'] is None:
-        print("You must either provide the API through the command line or through a file")
-        parser.print_help()
-        return
-
-    RIOT_API_KEY = ""
-    if args['API'] is not None:
-        RIOT_API_KEY = args['API']
-    else:
-        RIOT_API_KEY_FILENAME = args['API_file']
-        try:
-            with open(RIOT_API_KEY_FILENAME) as file:
-                RIOT_API_KEY = file.readline()
-        except FileNotFoundError:
-            print("Couldn't find the specified file with the RIOT API key, please check again")
-            return
-
-    db_url = "mongodb://localhost:27017" if args['db_url'] is None else args['db_url']
-
-    crawler = Crawler(RIOT_API_KEY, input, db_url)
-    crawler.start_crawling()
-
-
-if __name__ == "__main__":
-    main()
