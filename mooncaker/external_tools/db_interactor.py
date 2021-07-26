@@ -8,6 +8,13 @@ from . import REGIONS, TIERS, DIVISIONS
 class Database():
 
     def __init__(self, db_url=None):
+        """
+        Initilizes the object by connecting to the Mongo DB if a url is given
+        otherwise it connects to a mock of a Mongo DB (testing only)
+
+        Args:
+            db_url (str, optional): The url on which to find the Mongo DB. Defaults to None.
+        """
         if db_url is not None:
             self.db = MongoClient(db_url, connect=True).get_database("mooncaker")
             self.db_matches = self.db.get_collection("matches")
@@ -35,11 +42,11 @@ class Database():
                               'division': division,
                               'page': 1}]
 
-    def reset_rediti(self):
-        self.db_rediti.drop()
-        self.set_rediti()
-
     def set_rediti(self):
+        """
+        If the collection used to track the crawler region, tier, division is empty
+        it gets initialized
+        """
         if self.db_rediti.count_documents({}) == 0:
             comb = [{'region': reg,
                      'tier': tier,
@@ -51,7 +58,20 @@ class Database():
                     for div in DIVISIONS]
             self.db["ReDiTi"].insert_many(comb)
 
+    def reset_rediti(self):
+        """
+        Resets the tracking of the crawling process
+        """
+        self.db_rediti.drop()
+        self.set_rediti()
+
     def ranks2crawl(self):
+        """
+        A generator that yields the ranks that needs to be crawled
+
+        Yields:
+            (tuple): a tuple with the _id, region, tier, division and page to crawl
+        """
         for elem in self.to_crawl:
             yield elem['_id'], elem['region'], elem['tier'], elem['division'], elem['page']
             self.db_rediti.update_one({'_id': elem['_id']}, {'$set': {'crawled': True}})

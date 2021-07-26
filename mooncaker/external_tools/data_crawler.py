@@ -2,8 +2,6 @@
     Crawls lol data with the APi and stores it in a database
 """
 
-from functools import partial
-import argparse
 import re
 import time
 import logging

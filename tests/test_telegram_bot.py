@@ -8,7 +8,7 @@ from telegram import Update, User, Message, Chat
 
 @pytest.fixture()
 def bot():
-    return MooncakerBot('not_a_token', None, 'not_a_path', 'not_a_whitelist',None)
+    return MooncakerBot('not_a_token', None, 'not_a_path', 'not_a_whitelist', None)
 
 
 def mock_dispatcher(update, context):
