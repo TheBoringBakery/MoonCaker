@@ -15,6 +15,10 @@ class MooncakerBot:
                        [SAD_ZOE, MEGUMIN_THUMB_UP, PARTY_GIRL, LOLI]}
 
     def __init__(self, token, set_api, log_url, whitelist, db_url="mongodb://datacaker:27017"):
+        """
+        Initializes the bot, stores the telegram token, connects to the database and saves the url of the log and
+        the function to call when setting a new api_key
+        """
         self.db = Database(db_url)
         self.token = token
         self.set_api = set_api
@@ -22,15 +26,19 @@ class MooncakerBot:
         self.whitelist = whitelist
         self.WAITING_API = 0
 
-    def authorize_and_dispatch(self, update: Update, context: CallbackContext, dispatcher, whitelist):
-        if update.effective_user.username in whitelist.split():
+    def authorize_and_dispatch(self, update: Update, context: CallbackContext, dispatcher):
+        """
+        Authorizes a user to access functionalities by checking its username in the stored whitelist, if the user is
+        authorized the passed dispatcher is called to handle the request
+        """
+        if update.effective_user.username in self.whitelist.split():
             return dispatcher(update=update, context=context)
         else:
             update.message.reply_sticker(self.NAME_TO_STICKER[self.SAD_ZOE])
             update.message.reply_text("Sorry, you cannot do that")
 
     def start(self, update: Update, context: CallbackContext) -> None:
-        """Send a message when the command /start is issued."""
+        """Dispatcher for the command /start."""
         print(update.effective_chat.id)
         user = update.effective_user
         update.message.reply_sticker(self.NAME_TO_STICKER[self.LOLI])
@@ -55,19 +63,20 @@ class MooncakerBot:
         query.answer()
         if query.data == '1':
             query.edit_message_text(
-                text=f"Available commands: \n /get_full_log \n /get_last_10_log \n /set_api_key \n /get_ReDiTi \n /get_count")
+                text=f"Available commands: \n /get_full_log \n /get_last_10_log \n /set_api_key \n /get_ReDiTi \n "
+                     f"/get_count")
         else:
             query.edit_message_text(text=f"You are the best, onii-chan! I will always support you!")
 
-    def help_command(self, update: Update, context: CallbackContext) -> None:
-        """Send a message when the command /help is issued."""
-        update.message.reply_text('Help!')
-
-    def get_log(self, update: Update, context: CallbackContext, log_filename, lines=None) -> None:
-        with open(log_filename) as log:
-            if not lines is None:
+    def get_log(self, update: Update, context: CallbackContext, n_lines=None) -> None:
+        """
+        Dispatcher for the commands which have to retrieve the log. Retrieves the whole log if the argument lines is
+        None, otherwise it returns the last n_lines lines of the log.
+        """
+        with open(self.log_url) as log:
+            if not n_lines is None:
                 with open("tmp.txt", "a") as less_log:
-                    for line in (log.readlines()[-lines:]):
+                    for line in (log.readlines()[-n_lines:]):
                         less_log.write(line + "\n")
                 with open("tmp.txt", "r") as less_log:
                     context.bot.send_document(chat_id=update.effective_chat.id, document=less_log,
@@ -78,22 +87,35 @@ class MooncakerBot:
                                           filename="full_log.txt")
 
     def set_api_key_req(self, update: Update, context: CallbackContext) -> int:
+        """
+        Replies to the user wanting to set a new api key. By returning WAITING_API the set-api-key-dispatcher state
+        machine transitions and waits for the next message which should be the new api key.
+        """
         update.message.reply_text(
             f"Please gimme all your new API key, I want it so bad..or use /cancel to make me stop waiting..")
         return self.WAITING_API
 
-    def set_new_api(self, update: Update, context: CallbackContext, set_api):
+    def set_new_api(self, update: Update, context: CallbackContext):
+        """
+        Checks the correct format of the given api key and then sets the new api key to the user-given one. Upon
+        returning, the set-api-key-dispatcher state machine terminate if the insertion was successful and loops back
+        to the same state otherwise.
+        """
         new_api = ''.join([c for c in update.message.text if c.isalnum() or c in ['-']])
         if len(new_api) != 42:
             update.message.reply_sticker(self.NAME_TO_STICKER[self.SAD_ZOE])
             update.message.reply_text('Why r u tryin to troll me, insert a valid key baka')
             return self.WAITING_API
-        set_api(new_api)
+        self.set_api(new_api)
         update.message.reply_sticker(self.NAME_TO_STICKER[self.PARTY_GIRL])
         update.message.reply_text(f"New API key set! Hurray!")
         return ConversationHandler.END
 
     def get_ReDiTi(self, update: Update, context: CallbackContext) -> None:
+        """
+        Retrieves from the database the collection of crawled regions, divisions, tiers and sends it to the user in
+        textual format.
+        """
         elems = self.db.get_rediti()
         with open('rediti.txt', 'a') as res:
             for elem in elems:
@@ -104,35 +126,40 @@ class MooncakerBot:
         remove('rediti.txt')
 
     def get_count(self, update: Update, context: CallbackContext) -> None:
+        """
+        Retrieves from the database the number of crawled matches and sends it to the user.
+        """
         update.message.reply_text(str(self.db.count_matches()))
 
     def canc_key_wait(self, update: Update, context: CallbackContext):
+        """
+        Makes the set-api-key-dispatcher state machine stop waiting for an api key, terminating the state machine.
+        """
         update.message.reply_sticker(self.NAME_TO_STICKER[self.MEGUMIN_THUMB_UP])
         update.message.reply_text(f'Okidoki! Not waiting for key anymore!')
         return ConversationHandler.END
 
     def start_bot(self) -> None:
+        """
+        Starts the bot, creating the updater and adding the dispatchers for the available commands.
+        """
         updater = Updater(self.token)
 
         # Get the dispatcher to register handlers
         dispatcher = updater.dispatcher
 
         # on different commands - answer in Telegram
-        part_auth_dispatch = partial(self.authorize_and_dispatch, whitelist=self.whitelist)
-        part = partial(part_auth_dispatch, dispatcher=self.start)
+        part = partial(self.authorize_and_dispatch, dispatcher=self.start)
         dispatcher.add_handler(CommandHandler("start", part))
-        part = partial(part_auth_dispatch, dispatcher=self.help_command)
-        dispatcher.add_handler(CommandHandler("help", part))
         updater.dispatcher.add_handler(CallbackQueryHandler(self.button))
-        part_last_10 = partial(self.get_log, log_filename=self.log_url, lines=10)
-        part = partial(part_auth_dispatch, dispatcher=part_last_10)
+        part_last_10 = partial(self.get_log, n_lines=10)
+        part = partial(self.authorize_and_dispatch, dispatcher=part_last_10)
         dispatcher.add_handler(CommandHandler("get_last_10_log", part))
         part_log = partial(self.get_log, log_filename=self.log_url)
-        part = partial(part_auth_dispatch, dispatcher=part_log)
+        part = partial(self.authorize_and_dispatch, dispatcher=part_log)
         dispatcher.add_handler(CommandHandler("get_full_log", part))
-        part = partial(part_auth_dispatch, dispatcher=self.set_api_key_req)
-        partial_set_api = partial(self.set_new_api, set_api=self.set_api)
-        part_set = partial(part_auth_dispatch, dispatcher=partial_set_api)
+        part = partial(self.authorize_and_dispatch, dispatcher=self.set_api_key_req)
+        part_set = partial(self.authorize_and_dispatch, dispatcher=self.set_new_api())
         set_key_handler = ConversationHandler(entry_points=[CommandHandler('set_api_key', part)],
                                               states={
                                                   self.WAITING_API: [
@@ -141,9 +168,9 @@ class MooncakerBot:
                                               },
                                               fallbacks=[CommandHandler('cancel', self.canc_key_wait)])
         dispatcher.add_handler(set_key_handler)
-        part = partial(part_auth_dispatch, dispatcher=self.get_ReDiTi)
+        part = partial(self.authorize_and_dispatch, dispatcher=self.get_ReDiTi)
         dispatcher.add_handler(CommandHandler("get_ReDiTi", part))
-        part = partial(part_auth_dispatch, dispatcher=self.get_count)
+        part = partial(self.authorize_and_dispatch, dispatcher=self.get_count)
         dispatcher.add_handler(CommandHandler("get_count", part))
         updater.start_polling()
         updater.idle()

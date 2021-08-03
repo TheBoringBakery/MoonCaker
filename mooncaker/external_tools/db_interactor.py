@@ -9,14 +9,14 @@ class Database():
 
     def __init__(self, db_url=None):
         """
-        Initilizes the object by connecting to the Mongo DB if a url is given
+        Initializes the object by connecting to the Mongo DB if a url is given
         otherwise it connects to a mock of a Mongo DB (testing only)
 
         Args:
             db_url (str, optional): The url on which to find the Mongo DB. Defaults to None.
         """
         if db_url is not None:
-            self.db = MongoClient(db_url, connect=True).get_database("mooncaker")
+            self.db = MongoClient(db_url, connect=False).get_database("mooncaker")
             self.db_matches = self.db.get_collection("matches")
             self.db_rediti = self.db.get_collection("ReDiTi")
 
