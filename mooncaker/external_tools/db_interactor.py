@@ -90,11 +90,8 @@ class Database():
             Returns:
             List[Dict]: list of clash games ids
         """
-        # match_list = [match for matches in match_lists for match in matches]
-        # game_ids = [match.get('gameId') for match in match_list]
-        # game_ids = list(dict.fromkeys(game_ids))
         not_pres = [g_id for g_id in match_list
-                    if not self.db_matches.count_documents({"_id": g_id}) > 0]  # todo: explicit integer comparison
+                    if not self.db_matches.count_documents({"_id": g_id}) > 0]
         not_pres = list(dict.fromkeys(not_pres))
         return not_pres
 

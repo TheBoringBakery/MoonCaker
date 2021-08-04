@@ -1,7 +1,7 @@
 from functools import partial
 from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler, \
-    ConversationHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
+    CallbackContext, CallbackQueryHandler, ConversationHandler
 from os import remove
 from mooncaker.external_tools.db_interactor import Database
 

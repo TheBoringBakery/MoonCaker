@@ -155,3 +155,48 @@ class TestAccIdBySumName:
             assert puuid is None
         assert len(puuids) == 3
         assert sleep_called_counter - old_counter > 0
+
+
+class TestClashMatches:
+    # check on successful call
+    succ_list = [{'puuid': 'aaaaaaaaaaaaaaaa32aaaaaaaaaaaaaaaa'},
+                 {'puuid': 'bbbbbbbbbbbbbbbb32bbbbbbbbbbbbbbbb'},
+                 {}]
+    index = -1
+
+    def get_puuid(self, *_):
+        self.index += 1
+        return self.succ_list[self.index]
+
+    @pytest.fixture()
+    def mock_entries_succ(self, monkeypatch):
+        monkeypatch.setattr(SummonerApiV4, "by_name", self.get_puuid)
+
+    def test_entries_succ(self, crawler, mock_entries_succ):
+        puuids = crawler.acc_id_by_sum_name('region', ['mockName1', 'mockName2', 'nonExistantName'])
+        for user in self.succ_list:
+            assert user.get('puuid') in puuids
+        assert len(puuids) == 3
+
+    # check on http error codes
+    def test_entries_generic_http_error(self, crawler, mock_entries_generic_http_error):
+        puuids = crawler.acc_id_by_sum_name('region', ['mockName1', 'mockName2', 'mockName3'])
+        for puuid in puuids:
+            assert puuid is None
+        assert len(puuids) == 3
+
+    def test_entries_key_error(self, crawler, mock_entries_403_error):
+        old_counter = key_request_counter
+        puuids = crawler.acc_id_by_sum_name('region', ['mockName1', 'mockName2', 'mockName3'])
+        for puuid in puuids:
+            assert puuid is None
+        assert len(puuids) == 3
+        assert key_request_counter - old_counter > 0
+
+    def test_entries_timeout_error(self, crawler, mock_entries_429_error, mock_sleep):
+        old_counter = sleep_called_counter
+        puuids = crawler.acc_id_by_sum_name('region', ['mockName1', 'mockName2', 'mockName3'])
+        for puuid in puuids:
+            assert puuid is None
+        assert len(puuids) == 3
+        assert sleep_called_counter - old_counter > 0
