@@ -90,34 +90,27 @@ class Crawler():
                 ids.append(None)
         return ids
 
-    def clash_matches(self, region, names, sum_ids):
+    def clash_matches(self, region, names):
         """
-        From summoner names and ids, gets their puuid, their match list,
+        From summoner names gets their puuid, their match list,
         then returns only the clash matches of the given players.
 
         Args:
             region (str): the server region to which the accounts belong (euw1, eune1, ...)
             names (list(str)): list of summoner names to crawl
-            sum_ids (list[int]): list of summoner ids respetive to the above name
 
         Returns:
             list(str): list of strings with the clash match ids as string
         """
         # retrieve accounts puuids
-        accounts = []
-        acc_ids = self.acc_id_by_sum_name(region, names)
-        for i in range(len(acc_ids)):
-            if not acc_ids[i] is None:
-                accounts.append({'summonerName': names[i], 'summonerId': sum_ids[i], 'puuid': acc_ids[i]})
-
-        # retrieve match list for each account
-        puuids = [account.get('puuid') for account in accounts]
+        puuids = self.acc_id_by_sum_name(region, names)
+        puuids = list(filter(None, puuids))
         match_list = []
-        big_region = REGION2BIG_REGION[region] 
-        for encr_puuid in puuids:
+        big_region = REGION2BIG_REGION[region]
+        for puuid in puuids:
             is_successful, matches = self.safe_api_call(['match', "matchlist_by_puuid"],
                                                         (big_region,
-                                                         encr_puuid,
+                                                         puuid,
                                                          700,
                                                          None,
                                                          0,
@@ -141,7 +134,7 @@ class Crawler():
             division(String): division of the queue
 
             Returns:
-                List(str), List(str): list of players' summoner name and summonerId belonging to the given tier,division,region
+                List(str): list of players' summoner name
         """
         is_successful, players_list = self.safe_api_call(['league', 'entries'],
                                                          (region,
@@ -150,9 +143,8 @@ class Crawler():
                                                           division,
                                                           page))
         if is_successful and players_list:
-            return [summoner.get('summonerName') for summoner in players_list], \
-                   [summoner.get('summonerId') for summoner in players_list]
-        return None, None
+            return [summoner.get('summonerName') for summoner in players_list]
+        return None
 
     @staticmethod
     def is_jungler(player):
@@ -249,8 +241,8 @@ class Crawler():
             is_last_page = False
             while not is_last_page:
                 logging.info(f"datacrawler: Crawling {region}, {tier}, {division}, {page}")
-                names, sum_ids = self.summoner_names(region, tier, division, page)
-                if names is None or sum_ids is None:
+                names = self.summoner_names(region, tier, division, page)
+                if names is None:
                     is_last_page = True
                 else:
                     page += 1
@@ -260,8 +252,7 @@ class Crawler():
                     for index in range(0, len(names), batch_size):
                         batch_names = names[index: min(index+batch_size, len(names))]
                         match_list = self.clash_matches(region,
-                                                        batch_names,
-                                                        sum_ids)
+                                                        batch_names)
                         match_docs = self.match_details(match_list, region)
                         self.db.insert_match_page(id, match_docs, page)
         logging.info('datacrawler: Finished crawling, resetting rediti and starting again')
