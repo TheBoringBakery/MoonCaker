@@ -203,7 +203,7 @@ class Crawler():
             new_doc = {"_id": g_id, "region": region, "duration": match['info']["gameDuration"],
                        "patch": float(re.search(r'^\d+[.]\d+', match['info']["gameVersion"]).group())}
             teams = [team["teamId"] for team in match['info']["teams"]]
-            new_doc["winner"] = teams[0] if match['info']["teams"][0]["win"] == 'Win' else teams[1]
+            new_doc["winner"] = teams[0] if match['info']["teams"][0]["win"] is True else teams[1]
             i = 0
             bans = [[], []]
             for team in match['info']["teams"]:
@@ -254,3 +254,4 @@ class Crawler():
                         self.db.insert_match_page(id, match_docs, page)
         logging.info('datacrawler: Finished crawling, resetting rediti and starting again')
         self.db.reset_rediti()
+

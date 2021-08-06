@@ -220,3 +220,32 @@ class TestClashMatches:
         matches = crawler.clash_matches('euw1', ['mockName1', 'mockName2', 'nonExistentName'])
         assert len(matches) == 0
         assert sleep_called_counter - old_counter > 0
+
+
+class TestMatchDetails:
+    matches = [{'info': {'gameDuration': 1234567,
+                'gameVersion': '1.2.3.4', 
+                'participants': [{'participantId': 1, 'puuid': 'a'}, {'participantId': 2, 'puuid': 'b'}, {'participantId': 3, 'puuid': 'c'}, {'participantId': 4, 'puuid': 'd'}, {'participantId': 5, 'puuid': 'e'}, {'participantId': 6, 'puuid': 'f'}, {'participantId': 7, 'puuid': 'g'}, {'participantId': 8, 'puuid': 'h'}, {'participantId': 9, 'puuid': 'i'}, {'participantId': 10, 'puuid': 'j'}],
+                'teams': [{'teamId': 1, 'win': True, 'bans': [{'championId': 1}, {'championId': 2}, {'championId': 3}, {'championId': 4}, {'championId': 5}]},
+                          {'teamId': 2, 'win': False, 'bans': [{'championId': 6}, {'championId': 7}, {'championId': 8}, {'championId': 9}, {'championId': 10}]}]}}
+               for _ in range(3)]
+
+    timelines = [{'info': {'frames': [{}, {}, {'ParticipantFrames': {'1': {'position': {'x': 2030, 'y': 12480}, 'minionsKilled': 1}, '2': {'position': {'x': 6215, 'y': 10700}, 'minionsKilled': 2}, '3': {'position': {'x': 7100, 'y': 7100}, 'minionsKilled': 3}, '4': {'position': {'x': 11500, 'y': 2000}, 'minionsKilled': 4}, '5': {'position': {'x': 11110, 'y': 1300}, 'minionsKilled': 5}, '6': {'position': {'x': 2600, 'y': 12700}, 'minionsKilled': 6}, '7': {'position': {'x': 7300, 'y': 5100}, 'minionsKilled': 7}, '8': {'position': {'x': 7900, 'y': 7300}, 'minionsKilled': 8}, '9': {'position': {'x': 12600, 'y': 3000}, 'minionsKilled': 9}, '10': {'position': {'x': 11100, 'y': 2100}, 'minionsKilled': 10}}}]}} 
+                 for _ in range(3)]
+    
+    index = -1
+
+    def match_by_id(self, *_):
+        return self.matches[self.index]
+
+    def timeline_by_id(self, *_):
+        return self.timelines[self.index]
+
+    @pytest.fixture()
+    def mock_entries_succ(self, monkeypatch):
+        monkeypatch.setattr(MatchApiV5, "by_id", self.get_puuids)
+
+    @pytest.fixture()
+    def mock_matchlist_succ(self, monkeypatch):
+        monkeypatch.setattr(MatchApiV5, "timeline_by_match", self.get_matches)
+
