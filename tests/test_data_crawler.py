@@ -90,7 +90,7 @@ class TestSummonerNames:
 
     def test_entries_empty(self, crawler, mock_entries_empty):
         names = crawler.summoner_names('region', 'tier', 'division', 1)
-        assert not names
+        assert names is None
 
     # check on http error codes
     def test_entries_generic_http_error(self, crawler, mock_entries_generic_http_error):
@@ -110,7 +110,7 @@ class TestSummonerNames:
         assert sleep_called_counter - old_counter > 0
 
 
-class TestAccIdBySumName:
+class TestPuuidIdBySumName:
     # check on successful call
     succ_list = [{'puuid': 'aaaaaaaaaaaaaaaa32aaaaaaaaaaaaaaaa'},
                  {'puuid': 'bbbbbbbbbbbbbbbb32bbbbbbbbbbbbbbbb'},
@@ -126,21 +126,21 @@ class TestAccIdBySumName:
         monkeypatch.setattr(SummonerApiV4, "by_name", self.get_puuid)
 
     def test_entries_succ(self, crawler, mock_entries_succ):
-        puuids = crawler.acc_id_by_sum_name('region', ['mockName1', 'mockName2', 'nonExistantName'])
+        puuids = crawler.puuids_by_name('region', ['mockName1', 'mockName2', 'nonExistantName'])
         for user in self.succ_list:
             assert user.get('puuid') in puuids
         assert len(puuids) == 3
 
     # check on http error codes
     def test_entries_generic_http_error(self, crawler, mock_entries_generic_http_error):
-        puuids = crawler.acc_id_by_sum_name('region', ['mockName1', 'mockName2', 'mockName3'])
+        puuids = crawler.puuids_by_name('region', ['mockName1', 'mockName2', 'mockName3'])
         for puuid in puuids:
             assert puuid is None
         assert len(puuids) == 3
 
     def test_entries_key_error(self, crawler, mock_entries_403_error):
         old_counter = key_request_counter
-        puuids = crawler.acc_id_by_sum_name('region', ['mockName1', 'mockName2', 'mockName3'])
+        puuids = crawler.puuids_by_name('region', ['mockName1', 'mockName2', 'mockName3'])
         for puuid in puuids:
             assert puuid is None
         assert len(puuids) == 3
@@ -148,7 +148,7 @@ class TestAccIdBySumName:
 
     def test_entries_timeout_error(self, crawler, mock_entries_429_error, mock_sleep):
         old_counter = sleep_called_counter
-        puuids = crawler.acc_id_by_sum_name('region', ['mockName1', 'mockName2', 'mockName3'])
+        puuids = crawler.puuids_by_name('region', ['mockName1', 'mockName2', 'mockName3'])
         for puuid in puuids:
             assert puuid is None
         assert len(puuids) == 3
@@ -163,8 +163,7 @@ class TestClashMatches:
     match_list = ['match_id1',
                   'match_id2',
                   'match_id3',
-                  'match_id4',
-                  None]
+                  'match_id4']
     index = -1
 
     def get_puuids(self, *_):
@@ -179,11 +178,15 @@ class TestClashMatches:
 
     @pytest.fixture()
     def mock_entries_succ(self, monkeypatch):
-        monkeypatch.setattr(Crawler, "acc_id_by_sum_name", self.get_puuids)
+        monkeypatch.setattr(Crawler, "puuids_by_name", self.get_puuids)
 
     @pytest.fixture()
     def mock_matchlist_succ(self, monkeypatch):
         monkeypatch.setattr(MatchApiV5, "matchlist_by_puuid", self.get_matches)
+
+    @pytest.fixture()
+    def mock_matchlist_unsucc(self, monkeypatch):
+        monkeypatch.setattr(MatchApiV5, "matchlist_by_puuid", lambda *_: [])
 
     @pytest.fixture()
     def mock_filter_succ(self, monkeypatch):
@@ -197,18 +200,22 @@ class TestClashMatches:
         assert None not in matches
         assert len(matches) == 8
 
-    # check on http error codes
-    def test_entries_generic_http_error(self, crawler, mock_entries_generic_http_error):
+    def test_entries_unsucc(self, crawler, mock_entries_succ, mock_matchlist_unsucc, mock_filter_succ):
         matches = crawler.clash_matches('euw1', ['mockName1', 'mockName2', 'nonExistentName'])
         assert len(matches) == 0
 
-    def test_entries_key_error(self, crawler, mock_entries_403_error):
+    # check on http error codes
+    def test_entries_generic_http_error(self, crawler, mock_entries_succ, mock_entries_generic_http_error):
+        matches = crawler.clash_matches('euw1', ['mockName1', 'mockName2', 'nonExistentName'])
+        assert len(matches) == 0
+
+    def test_entries_key_error(self, crawler, mock_entries_succ, mock_entries_403_error):
         old_counter = key_request_counter
         matches = crawler.clash_matches('euw1', ['mockName1', 'mockName2', 'nonExistentName'])
         assert len(matches) == 0
         assert key_request_counter - old_counter > 0
 
-    def test_entries_timeout_error(self, crawler, mock_entries_429_error, mock_sleep):
+    def test_entries_timeout_error(self, crawler, mock_entries_succ, mock_entries_429_error, mock_sleep):
         old_counter = sleep_called_counter
         matches = crawler.clash_matches('euw1', ['mockName1', 'mockName2', 'nonExistentName'])
         assert len(matches) == 0

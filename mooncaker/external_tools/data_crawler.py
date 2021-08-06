@@ -58,7 +58,6 @@ class Crawler():
                 elif err.response.status_code == 404:
                     logging.warning("datacrawler: Received a 404 status code with the following arguments")
                 elif err.response.status_code == 429:
-                    # todo: how many is too many ?
                     logging.warning("datacrawler: Received a 429 status code, too many same type requests, sleeping for 60s")
                     time.sleep(60)
                 else:
@@ -67,17 +66,16 @@ class Crawler():
                 return self.safe_api_call(attributes, args, retry_count - 1)
         return call_is_successful, result
 
-    # gets account Ids of given summoners, returning None for accounts not found
-    def acc_id_by_sum_name(self, region, summoner_names):
+    def puuids_by_name(self, region, summoner_names):
         """
-            Fetch accountIds for each summoner name and returns them as a list
+            Fetch PUUIDs for each summoner name and returns them as a list
 
             Parameters:
             region(String): the server region to which the accounts belong
-            summoner_names(List[String]): list of summoner names to search accountIds for
+            summoner_names(List[String]): list of summoner names to search PUUID for
 
             Returns:
-            List[String]: list of accountIds associated to input summoner names, containing None if no accountId was found for the summoner name
+            List[String]: list of PUUIDs associated to input summoner names, containing None if no PUUID was found for the summoner name
         """
         ids = []
         for name in summoner_names:
@@ -103,7 +101,7 @@ class Crawler():
             list(str): list of strings with the clash match ids as string
         """
         # retrieve accounts puuids
-        puuids = self.acc_id_by_sum_name(region, names)
+        puuids = self.puuids_by_name(region, names)
         puuids = list(filter(None, puuids))
         match_list = []
         big_region = REGION2BIG_REGION[region]
@@ -122,7 +120,6 @@ class Crawler():
         match_list = list(filter(None, match_list))  # todo: might not be needed anymore
         return self.db.filter_match_duplicates(match_list)
 
-    # returns list of account infos: summoner name,summoner Id, account Id
     def summoner_names(self, region, tier, division, page, mode='RANKED_SOLO_5x5'):
         """
             Fetch all the summoner names in a tier and division
@@ -134,7 +131,7 @@ class Crawler():
             division(String): division of the queue
 
             Returns:
-                List(str): list of players' summoner name
+                List(str): list of players' summoner name or None if call is unsuccessful
         """
         is_successful, players_list = self.safe_api_call(['league', 'entries'],
                                                          (region,
