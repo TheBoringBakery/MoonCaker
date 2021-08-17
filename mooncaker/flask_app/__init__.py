@@ -17,7 +17,7 @@ api = Api(app)
 
 LOG_FILENAME = "mooncaker.log"
 app.config['LOG_FILENAME'] = LOG_FILENAME
-logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
+logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG, format='%(asctime)s %(levelname)-8s %(message)s')
 logging.info('mooncaker: Server has started from main')
 
 # load environment variables from file .env
@@ -25,6 +25,8 @@ load_dotenv()
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
+if 'testing' in environ:
+    app.config['TESTING'] = True
 try:
     app.config['MAIL_SERVER'] = environ['mail-server']
     app.config['MAIL_USERNAME'] = environ['mail-user']
@@ -37,7 +39,6 @@ try:
     app.config['TELEGRAM_TOKEN'] = environ['telegram-token']
     app.config['TELEGRAM_WHITELIST'] = environ['telegram-whitelist']
     app.config['TELEGRAM_REMINDER_CHAT_ID'] = environ['telegram-reminder-chat-id']
-
 except KeyError:
     print("The .env file was improperly set, please check the README for further information")
     exit()
@@ -56,11 +57,12 @@ bot_process = Process(target=bot.start_bot)
 bot_process.start()
 logging.info("mooncaker: starting telegram bot")
 
+
 def get_api_key():
     """
     Function that get called when a new api key is required
-    It sends an email to warn the admins of this need and hangs
-    waiting for a new key
+    It sends an email and a telegram message to warn the admins of this need
+    and hangs waiting for a new key
 
     Returns:
         str: the new api key

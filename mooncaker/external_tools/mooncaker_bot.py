@@ -1,10 +1,11 @@
 from functools import partial
-from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, InlineKeyboardMarkup
+from os import remove
+import requests
+from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, \
+    InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
     CallbackContext, CallbackQueryHandler, ConversationHandler
-from os import remove
 from mooncaker.external_tools.db_interactor import Database
-import requests
 
 
 class MooncakerBot:
@@ -15,10 +16,12 @@ class MooncakerBot:
     NAME_TO_STICKER = {name: Sticker(name, name, 512, 512, False) for name in
                        [SAD_ZOE, MEGUMIN_THUMB_UP, PARTY_GIRL, LOLI]}
 
-    def __init__(self, token, set_api, log_url, whitelist, db_url="mongodb://datacaker:27017"):
+    def __init__(self, token, set_api, log_url, whitelist, 
+                 db_url="mongodb://datacaker:27017"):
         """
-        Initializes the bot, stores the telegram token, connects to the database and saves the url of the log and
-        the function to call when setting a new api_key
+            Initializes the bot, stores the telegram token, connects to the
+            database and saves the url of the log and
+            the function to call when setting a new api_key
         """
         self.db = Database(db_url)
         self.token = token
@@ -29,10 +32,11 @@ class MooncakerBot:
 
     def send_new_api_reminder(self, chat_id) -> None:
         """
-        sends to admins a reminder for the insertion of a new api key
+            sends to admins a reminder for the insertion of a new api key
 
-        Args:
-            chat_id: telegram chat id of the admin to which the message should be sent
+            Args:
+                chat_id: telegram chat id of the admin to which the message
+                         should be sent
         """
         params = {
             'chat_id': chat_id,
@@ -43,8 +47,9 @@ class MooncakerBot:
 
     def authorize_and_dispatch(self, update: Update, context: CallbackContext, dispatcher):
         """
-        Authorizes a user to access functionalities by checking its username in the stored whitelist, if the user is
-        authorized the passed dispatcher is called to handle the request
+            Authorizes a user to access functionalities by checking its
+            username in the stored whitelist, if the user is
+            authorized the passed dispatcher is called to handle the request
         """
         if update.effective_user.username in self.whitelist.split():
             return dispatcher(update=update, context=context)
@@ -106,8 +111,7 @@ class MooncakerBot:
         Replies to the user wanting to set a new api key. By returning WAITING_API the set-api-key-dispatcher state
         machine transitions and waits for the next message which should be the new api key.
         """
-        update.message.reply_text(
-            f"Please gimme all your new API key, I want it so bad..or use /cancel to make me stop waiting..")
+        update.message.reply_text("Please gimme all your new API key, I want it so bad..or use /cancel to make me stop waiting..")
         return self.WAITING_API
 
     def set_new_api(self, update: Update, context: CallbackContext):
