@@ -158,7 +158,7 @@ class MooncakerBot:
         part = partial(self.authorize_and_dispatch, dispatcher=self.get_log)
         dispatcher.add_handler(CommandHandler("get_full_log", part))
         part = partial(self.authorize_and_dispatch, dispatcher=self.set_api_key_req)
-        part_set = partial(self.authorize_and_dispatch, dispatcher=self.set_new_api())
+        part_set = partial(self.authorize_and_dispatch, dispatcher=self.set_new_api)
         set_key_handler = ConversationHandler(entry_points=[CommandHandler('set_api_key', part)],
                                               states={
                                                   self.WAITING_API: [
