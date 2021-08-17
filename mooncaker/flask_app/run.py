@@ -1,7 +1,7 @@
 """
     Flask server that will run the data crawler and provide the RESTful API
 """
-from mooncaker import app
+from flask_app import app
 
 if __name__ == "__main__":
     
