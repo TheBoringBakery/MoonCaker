@@ -255,7 +255,8 @@ class Crawler():
                         match_list = self.clash_matches(region,
                                                         batch_names)
                         match_docs = self.match_details(match_list, region)
-                        self.db.insert_match_page(id, match_docs, page)
+                        if match_docs:
+                            self.db.insert_match_page(id, match_docs, page)
         logging.info('datacrawler: Finished crawling, resetting rediti and starting again')
         self.db.reset_rediti()
 
