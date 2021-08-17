@@ -223,29 +223,94 @@ class TestClashMatches:
 
 
 class TestMatchDetails:
-    matches = [{'info': {'gameDuration': 1234567,
-                'gameVersion': '1.2.3.4', 
-                'participants': [{'participantId': 1, 'puuid': 'a'}, {'participantId': 2, 'puuid': 'b'}, {'participantId': 3, 'puuid': 'c'}, {'participantId': 4, 'puuid': 'd'}, {'participantId': 5, 'puuid': 'e'}, {'participantId': 6, 'puuid': 'f'}, {'participantId': 7, 'puuid': 'g'}, {'participantId': 8, 'puuid': 'h'}, {'participantId': 9, 'puuid': 'i'}, {'participantId': 10, 'puuid': 'j'}],
-                'teams': [{'teamId': 1, 'win': True, 'bans': [{'championId': 1}, {'championId': 2}, {'championId': 3}, {'championId': 4}, {'championId': 5}]},
-                          {'teamId': 2, 'win': False, 'bans': [{'championId': 6}, {'championId': 7}, {'championId': 8}, {'championId': 9}, {'championId': 10}]}]}}
-               for _ in range(3)]
+    matches_succ = [{'info': {'gameDuration': 1234567,
+                              'gameVersion': '1.2.3.4',
+                              'participants': [{'participantId': 1, 'puuid': 'a', 'teamId': 1, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 1}, {'participantId': 2, 'puuid': 'b', 'teamId': 1, 'summoner1Id': 11, 'summoner2Id': 2, 'championId': 2}, {'participantId': 3, 'puuid': 'c', 'teamId': 1, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 3}, {'participantId': 4, 'puuid': 'd', 'teamId': 1, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 4}, {'participantId': 5, 'puuid': 'e', 'teamId': 1, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 5}, {'participantId': 6, 'puuid': 'f', 'teamId': 2, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 6}, {'participantId': 7, 'puuid': 'g', 'teamId': 2, 'summoner1Id': 11, 'summoner2Id': 2, 'championId': 7}, {'participantId': 8, 'puuid': 'h', 'teamId': 2, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 8}, {'participantId': 9, 'puuid': 'i', 'teamId': 2, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 9}, {'participantId': 10, 'puuid': 'j', 'teamId': 2, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 10}],
+                              'teams': [{'teamId': 1, 'win': True, 'bans': [{'championId': 1}, {'championId': 2}, {'championId': 3}, {'championId': 4}, {'championId': 5}]},
+                                        {'teamId': 2, 'win': False, 'bans': [{'championId': 6}, {'championId': 7}, {'championId': 8}, {'championId': 9}, {'championId': 10}]}]}}
+                    for _ in range(3)]
+    matches_unsucc = [{'info': {'gameDuration': 1234567,
+                                'gameVersion': '1.2.3.4',
+                                'participants': [{'participantId': 1, 'puuid': 'a', 'teamId': 1, 'summoner1Id': 1, 'summoner2Id': 11, 'championId': 1}, {'participantId': 2, 'puuid': 'b', 'teamId': 1, 'summoner1Id': 11, 'summoner2Id': 2, 'championId': 2}, {'participantId': 3, 'puuid': 'c', 'teamId': 1, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 3}, {'participantId': 4, 'puuid': 'd', 'teamId': 1, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 4}, {'participantId': 5, 'puuid': 'e', 'teamId': 1, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 5}, {'participantId': 6, 'puuid': 'f', 'teamId': 2, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 6}, {'participantId': 7, 'puuid': 'g', 'teamId': 2, 'summoner1Id': 11, 'summoner2Id': 2, 'championId': 7}, {'participantId': 8, 'puuid': 'h', 'teamId': 2, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 8}, {'participantId': 9, 'puuid': 'i', 'teamId': 2, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 9}, {'participantId': 10, 'puuid': 'j', 'teamId': 2, 'summoner1Id': 1, 'summoner2Id': 2, 'championId': 10}],
+                                'teams': [{'teamId': 1, 'win': True, 'bans': [{'championId': 1}, {'championId': 2}, {'championId': 3}, {'championId': 4}, {'championId': 5}]},
+                                          {'teamId': 2, 'win': False, 'bans': [{'championId': 6}, {'championId': 7}, {'championId': 8}, {'championId': 9}, {'championId': 10}]}]}}
+                      for _ in range(2)]
+    matches_unsucc.append(matches_succ[0])
 
-    timelines = [{'info': {'frames': [{}, {}, {'ParticipantFrames': {'1': {'position': {'x': 2030, 'y': 12480}, 'minionsKilled': 1}, '2': {'position': {'x': 6215, 'y': 10700}, 'minionsKilled': 2}, '3': {'position': {'x': 7100, 'y': 7100}, 'minionsKilled': 3}, '4': {'position': {'x': 11500, 'y': 2000}, 'minionsKilled': 4}, '5': {'position': {'x': 11110, 'y': 1300}, 'minionsKilled': 5}, '6': {'position': {'x': 2600, 'y': 12700}, 'minionsKilled': 6}, '7': {'position': {'x': 7300, 'y': 5100}, 'minionsKilled': 7}, '8': {'position': {'x': 7900, 'y': 7300}, 'minionsKilled': 8}, '9': {'position': {'x': 12600, 'y': 3000}, 'minionsKilled': 9}, '10': {'position': {'x': 11100, 'y': 2100}, 'minionsKilled': 10}}}]}} 
-                 for _ in range(3)]
-    
-    index = -1
+    timelines_succ = [{'info': {'frames': [{}, {}, {'participantFrames': {'1': {'position': {'x': 2030, 'y': 12480}, 'minionsKilled': 1}, '2': {'position': {'x': 6215, 'y': 10700}, 'minionsKilled': 2}, '3': {'position': {'x': 7100, 'y': 7100}, 'minionsKilled': 3}, '4': {'position': {'x': 11500, 'y': 2000}, 'minionsKilled': 4}, '5': {'position': {'x': 11110, 'y': 1300}, 'minionsKilled': 5}, '6': {'position': {'x': 2600, 'y': 12700}, 'minionsKilled': 6}, '7': {'position': {'x': 7300, 'y': 5100}, 'minionsKilled': 7}, '8': {'position': {'x': 7900, 'y': 7300}, 'minionsKilled': 8}, '9': {'position': {'x': 12600, 'y': 3000}, 'minionsKilled': 9}, '10': {'position': {'x': 11100, 'y': 2100}, 'minionsKilled': 10}}}]}} 
+                      for _ in range(3)]
+    timelines_unsucc = [{'info': {'frames': [{}, {}, {'participantFrames': {'1': {'position': {'x': 0, 'y': 0}, 'minionsKilled': 1}, '2': {'position': {'x': 6215, 'y': 10700}, 'minionsKilled': 2}, '3': {'position': {'x': 7100, 'y': 7100}, 'minionsKilled': 3}, '4': {'position': {'x': 11500, 'y': 2000}, 'minionsKilled': 4}, '5': {'position': {'x': 11110, 'y': 1300}, 'minionsKilled': 5}, '6': {'position': {'x': 2600, 'y': 12700}, 'minionsKilled': 6}, '7': {'position': {'x': 7300, 'y': 5100}, 'minionsKilled': 7}, '8': {'position': {'x': 7900, 'y': 7300}, 'minionsKilled': 8}, '9': {'position': {'x': 12600, 'y': 3000}, 'minionsKilled': 9}, '10': {'position': {'x': 11100, 'y': 2100}, 'minionsKilled': 10}}}]}} 
+                        for _ in range(2)]
+    timelines_unsucc.append(timelines_succ[0])
 
-    def match_by_id(self, *_):
-        return self.matches[self.index]
+    match_ids = [1, 2, 3]
 
-    def timeline_by_id(self, *_):
-        return self.timelines[self.index]
+    match_index = -1
+    timeline_index = -1
+
+    def match_by_id_succ(self, region, id):
+        assert region == "europe"
+        assert id in self.match_ids
+        self.match_index += 1
+        return self.matches_succ[self.match_index]
+
+    def timeline_by_id_succ(self, region, id):
+        assert region == "europe"
+        assert id in self.match_ids
+        self.timeline_index += 1
+        return self.timelines_succ[self.timeline_index]
+
+    def match_by_id_unsucc(self, region, id):
+        assert region == "europe"
+        assert id in self.match_ids
+        self.match_index += 1
+        return self.matches_unsucc[self.match_index]
+
+    def timeline_by_id_unsucc(self, region, id):
+        assert region == "europe"
+        assert id in self.match_ids
+        self.timeline_index += 1
+        return self.timelines_unsucc[self.timeline_index]
 
     @pytest.fixture()
-    def mock_entries_succ(self, monkeypatch):
-        monkeypatch.setattr(MatchApiV5, "by_id", self.get_puuids)
+    def mock_match_succ(self, monkeypatch):
+        monkeypatch.setattr(MatchApiV5, "by_id", self.match_by_id_succ)
 
     @pytest.fixture()
-    def mock_matchlist_succ(self, monkeypatch):
-        monkeypatch.setattr(MatchApiV5, "timeline_by_match", self.get_matches)
+    def mock_match_unsucc(self, monkeypatch):
+        monkeypatch.setattr(MatchApiV5, "by_id", self.match_by_id_unsucc)
 
+    @pytest.fixture()
+    def mock_timeline_succ(self, monkeypatch):
+        monkeypatch.setattr(MatchApiV5, "timeline_by_match", self.timeline_by_id_succ)
+        
+    @pytest.fixture()
+    def mock_timeline_unsucc(self, monkeypatch):
+        monkeypatch.setattr(MatchApiV5, "timeline_by_match", self.timeline_by_id_unsucc)
+
+    def test_match_details_succ(self, crawler, mock_match_succ, mock_timeline_succ):
+        docs = crawler.match_details(self.match_ids, "euw1")
+        assert len(docs) == 3
+        for doc in docs:
+            assert doc['_id'] in self.match_ids
+            assert doc['duration'] == 1234567
+            assert doc['patch'] == '1.2'
+            assert doc['region'] == 'euw1'
+            assert 'winner' in doc
+            for team in doc['team1'], doc['team2']:
+                roles = ['SUPPORT', 'ADC', 'MID', 'TOP', 'JUNGLE']
+                for role in roles:
+                    assert "summonerId" in team[role]
+                    assert "champion" in team[role]
+                assert team['teamId'] == 1 or team['teamId'] == 2
+                assert len(team['bans']) == 5
+
+    def test_match_details_matches_unsucc(self, crawler, mock_match_unsucc, mock_timeline_succ):
+        docs = crawler.match_details(self.match_ids, "euw1")
+        assert len(docs) == 1
+        assert docs[0]['_id'] == 3
+
+    def test_match_details_timeline_unsucc(self, crawler, mock_match_succ, mock_timeline_unsucc):
+        docs = crawler.match_details(self.match_ids, "euw1")
+        assert len(docs) == 1
+        assert docs[0]['_id'] == 3

@@ -177,7 +177,11 @@ class Crawler():
             region(String): a server region
 
         Returns:
-            list: list of docs containing the specs of the matches
+            list: list of docs containing the specs of each match excluding invalid ones.
+                  each doc is a dictionary with the following items:
+                    'teamId': int
+                    'bans': list(int)
+                    '<role>': dict('summonerId': int, 'champion': int) for each <role> in ADC, SUPPORT, MID, JUNGLE, TOP
         """
         big_region = REGION2BIG_REGION[region]
         match_docs = []
@@ -201,7 +205,7 @@ class Crawler():
             m_last_frame = timeline['info']['frames'][-1]['participantFrames']
             m2_pos = {int(num): m2_frame[num]['position'] for num in m2_frame.keys()}
             new_doc = {"_id": g_id, "region": region, "duration": match['info']["gameDuration"],
-                       "patch": float(re.search(r'^\d+[.]\d+', match['info']["gameVersion"]).group())}
+                       "patch": re.search(r'^\d+[.]\d+', match['info']["gameVersion"]).group()}
             teams = [team["teamId"] for team in match['info']["teams"]]
             new_doc["winner"] = teams[0] if match['info']["teams"][0]["win"] is True else teams[1]
             i = 0

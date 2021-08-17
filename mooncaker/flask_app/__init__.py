@@ -1,6 +1,5 @@
 from os import path, getcwd, environ
 import logging
-from threading import Thread
 from multiprocessing import Process, Queue
 from flask import Flask
 from flask_restful import Api
