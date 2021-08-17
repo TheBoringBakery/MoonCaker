@@ -36,6 +36,7 @@ try:
     app.config['ADMIN_PASS'] = environ['admin-hashed-pass'].encode('latin1').decode('unicode-escape').encode('latin1')
     app.config['TELEGRAM_TOKEN'] = environ['telegram-token']
     app.config['TELEGRAM_WHITELIST'] = environ['telegram-whitelist']
+    app.config['TELEGRAM_REMINDER_CHAT_ID'] = environ['telegram-reminder-chat-id']
 
 except KeyError:
     print("The .env file was improperly set, please check the README for further information")
@@ -46,6 +47,14 @@ Bootstrap(app)
 
 api_key_queue = Queue()  # Where the new API key will be put
 
+bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],
+                   api_key_queue.put,
+                   path.join(getcwd(), app.config['LOG_FILENAME']),
+                   app.config['TELEGRAM_WHITELIST'])
+
+bot_process = Process(target=bot.start_bot)
+bot_process.start()
+logging.info("mooncaker: starting telegram bot")
 
 def get_api_key():
     """
@@ -64,6 +73,8 @@ def get_api_key():
                       recipients=app.config['MAIL_RECIPIENTS'])
         mail.send(msg)
     logging.info("mooncaker: signal email sent")
+    bot.send_new_api_reminder(app.config['TELEGRAM_REMINDER_CHAT_ID'])
+    logging.info("mooncaker: signal telegram message sent")
     return api_key_queue.get()
 
 
@@ -71,13 +82,5 @@ crawler = Crawler("NotAnAPIKey", get_api_key)
 crawling_process = Process(target=crawler.start_crawling)
 crawling_process.start()
 logging.info("mooncaker: starting datacrawling")
-bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],
-                   api_key_queue.put,
-                   path.join(getcwd(), app.config['LOG_FILENAME']),
-                   app.config['TELEGRAM_WHITELIST'])
-
-bot_process = Process(target=bot.start_bot)
-bot_process.start()
-logging.info("mooncaker: starting telegram bot")
 
 from flask_app import routes

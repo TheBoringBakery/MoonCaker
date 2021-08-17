@@ -4,6 +4,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
     CallbackContext, CallbackQueryHandler, ConversationHandler
 from os import remove
 from mooncaker.external_tools.db_interactor import Database
+import requests
 
 
 class MooncakerBot:
@@ -25,6 +26,20 @@ class MooncakerBot:
         self.log_url = log_url
         self.whitelist = whitelist
         self.WAITING_API = 0
+
+    def send_new_api_reminder(self, chat_id) -> None:
+        """
+        sends to admins a reminder for the insertion of a new api key
+
+        Args:
+            chat_id: telegram chat id of the admin to which the message should be sent
+        """
+        params = {
+            'chat_id': chat_id,
+            'text': 'Senpai, I need a new api key :('
+        }
+        url = "https://api.telegram.org/bot" + self.token + "/sendMessage"
+        requests.get(url, params=params)
 
     def authorize_and_dispatch(self, update: Update, context: CallbackContext, dispatcher):
         """
@@ -144,11 +159,7 @@ class MooncakerBot:
         Starts the bot, creating the updater and adding the dispatchers for the available commands.
         """
         updater = Updater(self.token)
-
-        # Get the dispatcher to register handlers
         dispatcher = updater.dispatcher
-
-        # on different commands - answer in Telegram
         part = partial(self.authorize_and_dispatch, dispatcher=self.start)
         dispatcher.add_handler(CommandHandler("start", part))
         updater.dispatcher.add_handler(CallbackQueryHandler(self.button))
