@@ -50,19 +50,24 @@ class Crawler():
                 call_is_successful = True
             except ApiError as err:
                 if err.response.status_code == 403:
-                    logging.getLogger("mooncaker.logger").warning("datacrawler: Received a 403 status code, waiting new API")
+                    logging.getLogger("mooncaker.logger").warning("datacrawler: received a 403 status code, waiting new API")
                     logging.getLogger("mooncaker.logger").debug("datacrawler: going to possibly hang while waiting new api key")
                     new_key = self.get_new_key()
                     self.watcher = LolWatcher(new_key, default_match_v5=True)
                     logging.getLogger("mooncaker.logger").debug(f"datacrawler: received new api key ending with {new_key[-5:]}")
                 elif err.response.status_code == 404:
-                    logging.getLogger("mooncaker.logger").warning("datacrawler: Received a 404 status code with the following arguments")
+                    logging.getLogger("mooncaker.logger").warning("datacrawler: received a 404 status code with the following arguments: ")
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: {args}")
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: while calling {attributes}")
                 elif err.response.status_code == 429:
                     sleep_time = 60 * (4 - retry_count) 
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: Received a 429 status code, too many same type requests, sleeping for {sleep_time}")
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: received a 429 status code, too many same type requests, sleeping for {sleep_time}")
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: the request was: {attributes}")
                     time.sleep(sleep_time)
                 else:
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: Received a {err.response.status_code} status code")
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: received a {err.response.status_code} status code with the following arguments:")
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: {args}")
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: while calling {attributes}")
             if not call_is_successful:
                 return self.safe_api_call(attributes, args, retry_count - 1)
         return call_is_successful, result
