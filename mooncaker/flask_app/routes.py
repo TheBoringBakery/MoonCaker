@@ -14,7 +14,7 @@ from flask_app import app, mail, api_key_queue
 #         global API_KEY
 #         with api_lock:
 #             API_KEY = request.form['data']
-#             logging.info("Received a new API key")
+#             logging.getLogger("mooncaker.logger").info("Received a new API key")
 #             api_condition.notify()
 
 #         return {"result": "ok"}
@@ -38,9 +38,9 @@ def hello_world():
 @app.route('/send_suggestion/', methods=['POST'])
 def send_suggestion():
     text = "Either this is a test or something went wrong with the parsing of the suggestion, see server log for further information"
-    logging.info("mooncaker: a suggestion was submitted")
+    logging.getLogger("mooncaker.logger").info("mooncaker: a suggestion was submitted")
     if 'HTTP_ORIGIN' not in request.environ or request.environ['HTTP_ORIGIN'] != 'https://mooncaker.theboringbakery.com':
-        logging.warning("mooncaker: a suggestion from a non-approved domain was made")
+        logging.getLogger("mooncaker.logger").warning("mooncaker: a suggestion from a non-approved domain was made")
         return "<h1>We are sorry but we cannot validate the origin of this request, please visit theboringbakery.com for the correct interaction.</h1>"
 
     text = str(request.form)
@@ -59,7 +59,7 @@ def send_suggestion():
                   sender=app.config['MAIL_USERNAME'],
                   recipients=request.form['email'])
     mail.send(msg)
-    logging.info("mooncaker: the suggestion was successfully sent")
+    logging.getLogger("mooncaker.logger").info("mooncaker: the suggestion was successfully sent")
     return redirect("https://mooncaker.theboringbakery.com/#/response_suggestion", code=301)
 
 
@@ -86,7 +86,7 @@ def parse_command(command, args):
     #todo: implement database queries
     if command == "set-api-key":
         api_key_queue.put(args[0])
-        logging.info("mooncaker: Received a new API key")
+        logging.getLogger("mooncaker.logger").info("mooncaker: Received a new API key")
         return 'New API key set correctly'
     elif command == "get-log":
         with open(path.join(getcwd(), app.config['LOG_FILENAME'])) as logfile:

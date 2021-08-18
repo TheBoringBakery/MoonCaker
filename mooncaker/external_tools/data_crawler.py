@@ -50,18 +50,19 @@ class Crawler():
                 call_is_successful = True
             except ApiError as err:
                 if err.response.status_code == 403:
-                    logging.warning("datacrawler: Received a 403 status code, waiting new API")
-                    logging.debug("datacrawler: going to possibly hang while waiting new api key")
+                    logging.getLogger("mooncaker.logger").warning("datacrawler: Received a 403 status code, waiting new API")
+                    logging.getLogger("mooncaker.logger").debug("datacrawler: going to possibly hang while waiting new api key")
                     new_key = self.get_new_key()
                     self.watcher = LolWatcher(new_key, default_match_v5=True)
-                    logging.debug(f"datacrawler: received new api key ending with {new_key[-5:]}")
+                    logging.getLogger("mooncaker.logger").debug(f"datacrawler: received new api key ending with {new_key[-5:]}")
                 elif err.response.status_code == 404:
-                    logging.warning("datacrawler: Received a 404 status code with the following arguments")
+                    logging.getLogger("mooncaker.logger").warning("datacrawler: Received a 404 status code with the following arguments")
                 elif err.response.status_code == 429:
-                    logging.warning("datacrawler: Received a 429 status code, too many same type requests, sleeping for 60s")
-                    time.sleep(60)
+                    retry_count += 1
+                    logging.getLogger("mooncaker.logger").warning("datacrawler: Received a 429 status code, too many same type requests, sleeping for 120s")
+                    time.sleep(120)
                 else:
-                    logging.warning(f"datacrawler: Received a {err.response.status_code} status code")
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: Received a {err.response.status_code} status code")
             if not call_is_successful:
                 return self.safe_api_call(attributes, args, retry_count - 1)
         return call_is_successful, result
@@ -139,7 +140,7 @@ class Crawler():
                                                           tier,
                                                           division,
                                                           page))
-        if is_successful and players_list:
+        if is_successful:
             return [summoner.get('summonerName') for summoner in players_list]
         return None
 
@@ -241,9 +242,15 @@ class Crawler():
         for id, region, tier, division, page in self.db.ranks2crawl():
             is_last_page = False
             while not is_last_page:
-                logging.info(f"datacrawler: Crawling {region}, {tier}, {division}, {page}")
+                logging.getLogger("mooncaker.logger").info(f"datacrawler: Crawling {region}, {tier}, {division}, {page}")
                 names = self.summoner_names(region, tier, division, page)
                 if names is None:
+                    # call is unsuccessful
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: call to look up summoner names for {region}, {tier}, {division}, {page} was unsuccessful")
+                    break
+                elif len(names) == 0:
+                    # No names on that page
+                    logging.getLogger("mooncaker.logger").info(f"datacrawler: Crawler last page for {region}, {tier}, {division}, {page}")
                     is_last_page = True
                 else:
                     page += 1
@@ -257,6 +264,6 @@ class Crawler():
                         match_docs = self.match_details(match_list, region)
                         if match_docs:
                             self.db.insert_match_page(id, match_docs, page)
-        logging.info('datacrawler: Finished crawling, resetting rediti and starting again')
+        logging.getLogger("mooncaker.logger").info('datacrawler: Finished crawling, resetting rediti and starting again')
         self.db.reset_rediti()
 

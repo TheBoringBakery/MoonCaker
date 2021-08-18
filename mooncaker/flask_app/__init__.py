@@ -16,9 +16,15 @@ api = Api(app)
 
 
 LOG_FILENAME = "mooncaker.log"
+LOGGER_NAME = "mooncaker.logger"
 app.config['LOG_FILENAME'] = LOG_FILENAME
-logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG, format='%(asctime)s %(levelname)-8s %(message)s')
-logging.info('mooncaker: Server has started from main')
+handler = logging.getLogger("mooncaker.logger").FileHandler(LOG_FILENAME)        
+handler.setFormatter(logging.getLogger("mooncaker.logger").Formatter('%(asctime)s %(levelname)-8s %(message)s'))
+logger = logging.getLogger("mooncaker.logger").getLogger(LOGGER_NAME)
+logger.setLevel(logging.getLogger("mooncaker.logger").DEBUG)
+logger.addHandler(handler)
+logging.getLogger("mooncaker.logger").basicConfig(filename=LOG_FILENAME, level=logging.getLogger("mooncaker.logger").DEBUG, )
+logging.getLogger("mooncaker.logger").info('mooncaker: Server has started from main')
 
 # load environment variables from file .env
 load_dotenv()
@@ -55,7 +61,7 @@ bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],
 
 bot_process = Process(target=bot.start_bot)
 bot_process.start()
-logging.info("mooncaker: starting telegram bot")
+logging.getLogger("mooncaker.logger").info("mooncaker: starting telegram bot")
 
 
 def get_api_key():
@@ -74,15 +80,15 @@ def get_api_key():
                       sender=app.config['MAIL_USERNAME'],
                       recipients=app.config['MAIL_RECIPIENTS'])
         mail.send(msg)
-    logging.info("mooncaker: signal email sent")
+    logging.getLogger("mooncaker.logger").info("mooncaker: signal email sent")
     bot.send_new_api_reminder(app.config['TELEGRAM_REMINDER_CHAT_ID'])
-    logging.info("mooncaker: signal telegram message sent")
+    logging.getLogger("mooncaker.logger").info("mooncaker: signal telegram message sent")
     return api_key_queue.get()
 
 
 crawler = Crawler("NotAnAPIKey", get_api_key)
 crawling_process = Process(target=crawler.start_crawling)
 crawling_process.start()
-logging.info("mooncaker: starting datacrawling")
+logging.getLogger("mooncaker.logger").info("mooncaker: starting datacrawling")
 
 from flask_app import routes
