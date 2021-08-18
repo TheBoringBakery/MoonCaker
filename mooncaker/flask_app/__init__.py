@@ -18,12 +18,11 @@ api = Api(app)
 LOG_FILENAME = "mooncaker.log"
 LOGGER_NAME = "mooncaker.logger"
 app.config['LOG_FILENAME'] = LOG_FILENAME
-handler = logging.getLogger("mooncaker.logger").FileHandler(LOG_FILENAME)        
-handler.setFormatter(logging.getLogger("mooncaker.logger").Formatter('%(asctime)s %(levelname)-8s %(message)s'))
-logger = logging.getLogger("mooncaker.logger").getLogger(LOGGER_NAME)
-logger.setLevel(logging.getLogger("mooncaker.logger").DEBUG)
+handler = logging.FileHandler(LOG_FILENAME)        
+handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-8s %(message)s'))
+logger = logging.getLogger(LOGGER_NAME)
+logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
-logging.getLogger("mooncaker.logger").basicConfig(filename=LOG_FILENAME, level=logging.getLogger("mooncaker.logger").DEBUG, )
 logging.getLogger("mooncaker.logger").info('mooncaker: Server has started from main')
 
 # load environment variables from file .env

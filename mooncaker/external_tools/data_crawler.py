@@ -58,9 +58,9 @@ class Crawler():
                 elif err.response.status_code == 404:
                     logging.getLogger("mooncaker.logger").warning("datacrawler: Received a 404 status code with the following arguments")
                 elif err.response.status_code == 429:
-                    retry_count += 1
-                    logging.getLogger("mooncaker.logger").warning("datacrawler: Received a 429 status code, too many same type requests, sleeping for 120s")
-                    time.sleep(120)
+                    sleep_time = 60 * (4 - retry_count) 
+                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: Received a 429 status code, too many same type requests, sleeping for {sleep_time}")
+                    time.sleep(sleep_time)
                 else:
                     logging.getLogger("mooncaker.logger").warning(f"datacrawler: Received a {err.response.status_code} status code")
             if not call_is_successful:
