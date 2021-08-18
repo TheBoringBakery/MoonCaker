@@ -90,7 +90,7 @@ class TestSummonerNames:
 
     def test_entries_empty(self, crawler, mock_entries_empty):
         names = crawler.summoner_names('region', 'tier', 'division', 1)
-        assert names is None
+        assert len(names) == 0
 
     # check on http error codes
     def test_entries_generic_http_error(self, crawler, mock_entries_generic_http_error):
