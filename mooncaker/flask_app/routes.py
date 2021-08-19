@@ -1,11 +1,15 @@
+from functools import partial
+import hashlib
+from logging import WARNING, INFO, DEBUG
 from flask import redirect, session, render_template, url_for, g, request
 from flask_restful import Resource
 from flask_mail import Message
-from os import getcwd, path
-import hashlib
-import logging
 from flask_app.forms import AdminForm, ConsoleForm
 from flask_app import app, mail, api_key_queue
+from mooncaker.external_tools.logger import log as log_raw
+from mooncaker.external_tools.logger import get_log
+
+log = partial(log_raw, "mooncaker")
 
 # set REST API
 # @deprecated
@@ -14,7 +18,7 @@ from flask_app import app, mail, api_key_queue
 #         global API_KEY
 #         with api_lock:
 #             API_KEY = request.form['data']
-#             logging.getLogger("mooncaker.logger").info("Received a new API key")
+#             logging.getLogger(LOGGER_NAME).info("Received a new API key")
 #             api_condition.notify()
 
 #         return {"result": "ok"}
@@ -38,9 +42,9 @@ def hello_world():
 @app.route('/send_suggestion/', methods=['POST'])
 def send_suggestion():
     text = "Either this is a test or something went wrong with the parsing of the suggestion, see server log for further information"
-    logging.getLogger("mooncaker.logger").info("mooncaker: a suggestion was submitted")
+    log(INFO, "A suggestion was submitted")
     if 'HTTP_ORIGIN' not in request.environ or request.environ['HTTP_ORIGIN'] != 'https://mooncaker.theboringbakery.com':
-        logging.getLogger("mooncaker.logger").warning("mooncaker: a suggestion from a non-approved domain was made")
+        log(WARNING, "A suggestion from a non-approved domain was made")
         return "<h1>We are sorry but we cannot validate the origin of this request, please visit theboringbakery.com for the correct interaction.</h1>"
 
     text = str(request.form)
@@ -59,7 +63,7 @@ def send_suggestion():
                   sender=app.config['MAIL_USERNAME'],
                   recipients=request.form['email'])
     mail.send(msg)
-    logging.getLogger("mooncaker.logger").info("mooncaker: the suggestion was successfully sent")
+    log(INFO, "The suggestion was successfully sent")
     return redirect("https://mooncaker.theboringbakery.com/#/response_suggestion", code=301)
 
 
@@ -83,14 +87,13 @@ def admin():
 
 
 def parse_command(command, args):
-    #todo: implement database queries
+    # todo: implement database queries
     if command == "set-api-key":
         api_key_queue.put(args[0])
-        logging.getLogger("mooncaker.logger").info("mooncaker: Received a new API key")
+        log(INFO, "Received a new API key")
         return 'New API key set correctly'
     elif command == "get-log":
-        with open(path.join(getcwd(), app.config['LOG_FILENAME'])) as logfile:
-            return "<br>".join(logfile.readlines())
+        return "<br>".join(get_log())
     elif command == "help":
         return "Currently available commands are: <br> set-api-key [key] <br> get-log <br>"
     return 'Something when wrong parsing your command. Please report to the admins'

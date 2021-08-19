@@ -4,11 +4,12 @@
 
 import re
 import time
-import logging
+from functools import partial
+from logging import INFO, DEBUG, WARNING
 from riotwatcher import LolWatcher, ApiError
-from . import REGION2BIG_REGION
+from . import REGION2BIG_REGION, LOGGER_NAME
 from .db_interactor import Database
-
+from .logger import log as log_raw
 # todo: add conccurent requests where possible to speed things up
 
 
@@ -22,6 +23,7 @@ class Crawler():
         self.db = Database(db_url)
         self.watcher = LolWatcher(API_KEY, default_match_v5=True)
         self.get_new_key = get_key_blocking
+        self.log = partial(log_raw, "datacrawler")
 
     def safe_api_call(self, attributes, args, retry_count=3):
         """calls the given command and checks for the successful outcome
@@ -38,6 +40,7 @@ class Crawler():
         Returns:
             (bool, Any | None): the outcome of the operation and the result, None if it was unsuccessful
         """
+        self.log(INFO, f"Calling {attributes}")
         result = None
         call_is_successful = False
         if retry_count > 0:
@@ -50,24 +53,24 @@ class Crawler():
                 call_is_successful = True
             except ApiError as err:
                 if err.response.status_code == 403:
-                    logging.getLogger("mooncaker.logger").warning("datacrawler: received a 403 status code, waiting new API")
-                    logging.getLogger("mooncaker.logger").debug("datacrawler: going to possibly hang while waiting new api key")
+                    self.log(WARNING, "Received a 403 status code, waiting new API")
+                    self.log(DEBUG, "Going to possibly hang while waiting new api key")
                     new_key = self.get_new_key()
                     self.watcher = LolWatcher(new_key, default_match_v5=True)
-                    logging.getLogger("mooncaker.logger").debug(f"datacrawler: received new api key ending with {new_key[-5:]}")
+                    self.log(DEBUG, "Received new api key ending with {new_key[-5:]}")
                 elif err.response.status_code == 404:
-                    logging.getLogger("mooncaker.logger").warning("datacrawler: received a 404 status code with the following arguments: ")
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: {args}")
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: while calling {attributes}")
+                    self.log(WARNING, "Received a 404 status code with the following arguments: ")
+                    self.log(WARNING, f"{args}")
+                    self.log(WARNING, f"While calling {attributes}")
                 elif err.response.status_code == 429:
                     sleep_time = 60 * (4 - retry_count) 
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: received a 429 status code, too many same type requests, sleeping for {sleep_time}")
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: the request was: {attributes}")
+                    self.log(WARNING, f"Received a 429 status code, too many same type requests, sleeping for {sleep_time}")
+                    self.log(WARNING, f"The request was: {attributes}")
                     time.sleep(sleep_time)
                 else:
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: received a {err.response.status_code} status code with the following arguments:")
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: {args}")
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: while calling {attributes}")
+                    self.log(WARNING, f"Received a {err.response.status_code} status code with the following arguments:")
+                    self.log(WARNING, f"{args}")
+                    self.log(WARNING, f"While calling {attributes}")
             if not call_is_successful:
                 return self.safe_api_call(attributes, args, retry_count - 1)
         return call_is_successful, result
@@ -81,12 +84,13 @@ class Crawler():
             summoner_names(List[String]): list of summoner names to search PUUID for
 
             Returns:
-            List[String]: list of PUUIDs associated to input summoner names, containing None if no PUUID was found for the summoner name
+            List[String]: list of PUUIDs associated to input summoner names,
+                          containing None if no PUUID was found for the summoner name
         """
         ids = []
         for name in summoner_names:
             # todo: check when 404 maybe name has changed
-            is_successful, user = self.safe_api_call(["summoner", "by_name"], 
+            is_successful, user = self.safe_api_call(["summoner", "by_name"],
                                                      (region, name))
             if is_successful:
                 ids.append(user.get('puuid'))
@@ -171,8 +175,10 @@ class Crawler():
         farm = [frame[str(player["id"])]['minionsKilled'] for player in botlane]
         support = 0 if farm[0] < farm[1] else 1  # todo: what about senna?
         adc = 0 if support == 1 else 1
-        return {"SUPPORT": {"summonerId": botlane[support]['summonerId'], "champion": botlane[support]['champion']},
-                "ADC": {"summonerId": botlane[adc]['summonerId'], "champion": botlane[adc]['champion']}}
+        return {"SUPPORT": {"summonerId": botlane[support]['summonerId'],
+                            "champion": botlane[support]['champion']},
+                "ADC": {"summonerId": botlane[adc]['summonerId'], 
+                        "champion": botlane[adc]['champion']}}
 
     def match_details(self, match_list, region):
         """
@@ -187,7 +193,8 @@ class Crawler():
                   each doc is a dictionary with the following items:
                     'teamId': int
                     'bans': list(int)
-                    '<role>': dict('summonerId': int, 'champion': int) for each <role> in ADC, SUPPORT, MID, JUNGLE, TOP
+                    '<role>': dict('summonerId': int, 'champion': int) 
+                              for each <role> in ADC, SUPPORT, MID, JUNGLE, TOP
         """
         big_region = REGION2BIG_REGION[region]
         match_docs = []
@@ -232,7 +239,9 @@ class Crawler():
                 if role != "BOT":
                     teams[team][role] = {"summonerId": sum_id, "champion": champion}
                 else:
-                    bot[team].append({"summonerId": sum_id, "champion": champion, "id": player["participantId"]})
+                    bot[team].append({"summonerId": sum_id,
+                                      "champion": champion,
+                                      "id": player["participantId"]})
             if len(bot[0]) == 2 and len(bot[1]) == 2 and len(teams[0]) == 5 and len(teams[1]) == 5:
                 for team in range(2):
                     bot_roles = Crawler.check_bot_roles(bot[team], m_last_frame)
@@ -247,15 +256,15 @@ class Crawler():
         for id, region, tier, division, page in self.db.ranks2crawl():
             is_last_page = False
             while not is_last_page:
-                logging.getLogger("mooncaker.logger").info(f"datacrawler: Crawling {region}, {tier}, {division}, {page}")
+                self.log(INFO, f"Crawling {region}, {tier}, {division}, {page}")
                 names = self.summoner_names(region, tier, division, page)
                 if names is None:
                     # call is unsuccessful
-                    logging.getLogger("mooncaker.logger").warning(f"datacrawler: call to look up summoner names for {region}, {tier}, {division}, {page} was unsuccessful")
+                    self.log(WARNING, f"Call to look up summoner names for {region}, {tier}, {division}, {page} was unsuccessful")
                     break
                 elif len(names) == 0:
                     # No names on that page
-                    logging.getLogger("mooncaker.logger").info(f"datacrawler: Crawler last page for {region}, {tier}, {division}, {page}")
+                    self.log(INFO, f"Crawler last page for {region}, {tier}, {division}, {page}")
                     is_last_page = True
                 else:
                     page += 1
@@ -269,6 +278,5 @@ class Crawler():
                         match_docs = self.match_details(match_list, region)
                         if match_docs:
                             self.db.insert_match_page(id, match_docs, page)
-        logging.getLogger("mooncaker.logger").info('datacrawler: Finished crawling, resetting rediti and starting again')
+        self.log(INFO, 'Finished crawling, resetting rediti and starting again')
         self.db.reset_rediti()
-

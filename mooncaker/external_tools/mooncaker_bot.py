@@ -5,6 +5,7 @@ from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, \
     InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
     CallbackContext, CallbackQueryHandler, ConversationHandler
+from mooncaker.external_tools.logger import get_log
 from mooncaker.external_tools.db_interactor import Database
 
 
@@ -16,8 +17,7 @@ class MooncakerBot:
     NAME_TO_STICKER = {name: Sticker(name, name, 512, 512, False) for name in
                        [SAD_ZOE, MEGUMIN_THUMB_UP, PARTY_GIRL, LOLI]}
 
-    def __init__(self, token, set_api, log_url, whitelist, 
-                 db_url="mongodb://datacaker:27017"):
+    def __init__(self, token, set_api, whitelist, db_url="mongodb://datacaker:27017"):
         """
             Initializes the bot, stores the telegram token, connects to the
             database and saves the url of the log and
@@ -26,7 +26,6 @@ class MooncakerBot:
         self.db = Database(db_url)
         self.token = token
         self.set_api = set_api
-        self.log_url = log_url
         self.whitelist = whitelist
         self.WAITING_API = 0
 
@@ -88,23 +87,19 @@ class MooncakerBot:
         else:
             query.edit_message_text(text=f"You are the best, onii-chan! I will always support you!")
 
-    def get_log(self, update: Update, context: CallbackContext, n_lines=None) -> None:
+    def send_log(self, update: Update, context: CallbackContext, n_lines=0) -> None:
         """
         Dispatcher for the commands which have to retrieve the log. Retrieves the whole log if the argument lines is
         None, otherwise it returns the last n_lines lines of the log.
         """
-        with open(self.log_url) as log:
-            if not n_lines is None:
-                with open("tmp.txt", "a") as less_log:
-                    for line in (log.readlines()[-n_lines:]):
-                        less_log.write(line + "\n")
-                with open("tmp.txt", "r") as less_log:
-                    context.bot.send_document(chat_id=update.effective_chat.id, document=less_log,
-                                              filename="last_10_lines_of_log.txt")
-                remove("tmp.txt")
-            else:
-                context.bot.send_document(chat_id=update.effective_chat.id, document=log,
-                                          filename="full_log.txt")
+        log = get_log()
+        with open("tmp.txt", "a") as log2send:
+            log2send.writelines(log[-n_lines:])
+        with open("tmp.txt", "r") as log2send:
+            context.bot.send_document(chat_id=update.effective_chat.id,
+                                      document=log2send,
+                                      filename="mooncaker.log")
+        remove("tmp.txt")
 
     def set_api_key_req(self, update: Update, context: CallbackContext) -> int:
         """
@@ -127,7 +122,7 @@ class MooncakerBot:
             return self.WAITING_API
         self.set_api(new_api)
         update.message.reply_sticker(self.NAME_TO_STICKER[self.PARTY_GIRL])
-        update.message.reply_text(f"New API key set! Hurray!")
+        update.message.reply_text("New API key set! Hurray!")
         return ConversationHandler.END
 
     def get_ReDiTi(self, update: Update, context: CallbackContext) -> None:
@@ -167,10 +162,10 @@ class MooncakerBot:
         part = partial(self.authorize_and_dispatch, dispatcher=self.start)
         dispatcher.add_handler(CommandHandler("start", part))
         updater.dispatcher.add_handler(CallbackQueryHandler(self.button))
-        part_last_10 = partial(self.get_log, n_lines=10)
+        part_last_10 = partial(self.send_log, n_lines=10)
         part = partial(self.authorize_and_dispatch, dispatcher=part_last_10)
         dispatcher.add_handler(CommandHandler("get_last_10_log", part))
-        part = partial(self.authorize_and_dispatch, dispatcher=self.get_log)
+        part = partial(self.authorize_and_dispatch, dispatcher=self.send_log)
         dispatcher.add_handler(CommandHandler("get_full_log", part))
         part = partial(self.authorize_and_dispatch, dispatcher=self.set_api_key_req)
         part_set = partial(self.authorize_and_dispatch, dispatcher=self.set_new_api)

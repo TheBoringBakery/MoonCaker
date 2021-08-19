@@ -1,5 +1,6 @@
 from os import path, getcwd, environ
-import logging
+from functools import partial
+from logging import WARNING, DEBUG, INFO
 from multiprocessing import Process, Queue
 from flask import Flask
 from flask_restful import Api
@@ -9,21 +10,14 @@ from flask_talisman import Talisman
 from dotenv import load_dotenv
 from mooncaker.external_tools.data_crawler import Crawler
 from mooncaker.external_tools.mooncaker_bot import MooncakerBot
+from mooncaker.external_tools.logger import log as log_raw
 
 app = Flask(__name__)
 api = Api(app)
 # Talisman(app, force_https=False)
 
-
-LOG_FILENAME = "mooncaker.log"
-LOGGER_NAME = "mooncaker.logger"
-app.config['LOG_FILENAME'] = LOG_FILENAME
-handler = logging.FileHandler(LOG_FILENAME)        
-handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-8s %(message)s'))
-logger = logging.getLogger(LOGGER_NAME)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(handler)
-logging.getLogger("mooncaker.logger").info('mooncaker: Server has started from main')
+log = partial(log_raw, 'mooncaker')
+log(INFO, 'Server has started from main')
 
 # load environment variables from file .env
 load_dotenv()
@@ -40,7 +34,9 @@ try:
     app.config['SECRET_KEY'] = environ['secret-key']
     app.config['SALT'] = environ['hash-salt'].encode('latin1').decode('unicode-escape').encode('latin1')
     app.config['ADMIN_USER'] = environ['admin-user']
-    app.config['ADMIN_PASS'] = environ['admin-hashed-pass'].encode('latin1').decode('unicode-escape').encode('latin1')
+    app.config['ADMIN_PASS'] = environ['admin-hashed-pass'].encode('latin1') \
+                                                           .decode('unicode-escape') \
+                                                           .encode('latin1')
     app.config['TELEGRAM_TOKEN'] = environ['telegram-token']
     app.config['TELEGRAM_WHITELIST'] = environ['telegram-whitelist']
     app.config['TELEGRAM_REMINDER_CHAT_ID'] = environ['telegram-reminder-chat-id']
@@ -55,12 +51,11 @@ api_key_queue = Queue()  # Where the new API key will be put
 
 bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],
                    api_key_queue.put,
-                   path.join(getcwd(), app.config['LOG_FILENAME']),
                    app.config['TELEGRAM_WHITELIST'])
 
 bot_process = Process(target=bot.start_bot)
 bot_process.start()
-logging.getLogger("mooncaker.logger").info("mooncaker: starting telegram bot")
+log(INFO, "Starting telegram bot")
 
 
 def get_api_key():
@@ -79,15 +74,15 @@ def get_api_key():
                       sender=app.config['MAIL_USERNAME'],
                       recipients=app.config['MAIL_RECIPIENTS'])
         mail.send(msg)
-    logging.getLogger("mooncaker.logger").info("mooncaker: signal email sent")
+    log(INFO, "Signal email sent")
     bot.send_new_api_reminder(app.config['TELEGRAM_REMINDER_CHAT_ID'])
-    logging.getLogger("mooncaker.logger").info("mooncaker: signal telegram message sent")
+    log(INFO, "Signal telegram message sent")
     return api_key_queue.get()
 
 
 crawler = Crawler("NotAnAPIKey", get_api_key)
 crawling_process = Process(target=crawler.start_crawling)
 crawling_process.start()
-logging.getLogger("mooncaker.logger").info("mooncaker: starting datacrawling")
+log(INFO, "Starting datacrawling")
 
 from flask_app import routes
