@@ -10,7 +10,7 @@ whitelist = 'auth_user_1 auth_user_2'
 
 @pytest.fixture(params=[None])
 def bot(request):
-    return MooncakerBot('not_a_token', request.param, 'not_a_path', whitelist, None)
+    return MooncakerBot('not_a_token', request.param, whitelist, None)
 
 
 def mock_dispatcher(update, context):

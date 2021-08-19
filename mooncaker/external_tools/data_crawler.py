@@ -264,7 +264,7 @@ class Crawler():
                     break
                 elif len(names) == 0:
                     # No names on that page
-                    self.log(INFO, f"Crawler last page for {region}, {tier}, {division}, {page}")
+                    self.log(INFO, f"Crawled last page for {region}, {tier}, {division}, {page}")
                     is_last_page = True
                 else:
                     page += 1
