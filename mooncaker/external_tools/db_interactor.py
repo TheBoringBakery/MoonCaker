@@ -74,7 +74,9 @@ class Database():
         """
         for elem in self.to_crawl:
             yield elem['_id'], elem['region'], elem['tier'], elem['division'], elem['page']
-            self.db_rediti.update_one({'_id': elem['_id']}, {'$set': {'crawled': True}})
+
+    def mark_as_crawled(self, id):
+        self.db_rediti.update_one({'_id': id}, {'$set': {'crawled': True}})
 
     def insert_match_page(self, id, match_docs, page):
         self.db_matches.insert_many(match_docs)

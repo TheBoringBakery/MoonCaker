@@ -40,7 +40,7 @@ class Crawler():
         Returns:
             (bool, Any | None): the outcome of the operation and the result, None if it was unsuccessful
         """
-        self.log(INFO, f"Calling {attributes}")
+        self.log(INFO, f"Calling {attributes} with args: {args}")
         result = None
         call_is_successful = False
         if retry_count > 0:
@@ -57,13 +57,14 @@ class Crawler():
                     self.log(DEBUG, "Going to possibly hang while waiting new api key")
                     new_key = self.get_new_key()
                     self.watcher = LolWatcher(new_key, default_match_v5=True)
-                    self.log(DEBUG, "Received new api key ending with {new_key[-5:]}")
+                    self.log(DEBUG, f"Received new api key ending with {new_key[-5:]}")
                 elif err.response.status_code == 404:
                     self.log(WARNING, "Received a 404 status code with the following arguments: ")
                     self.log(WARNING, f"{args}")
                     self.log(WARNING, f"While calling {attributes}")
                 elif err.response.status_code == 429:
-                    sleep_time = 60 * (4 - retry_count) 
+                    sleep_time = err.response.headers.get("Retry-After")
+                    sleep_time = 60 * (4 - retry_count) if sleep_time is None else int(sleep_time)
                     self.log(WARNING, f"Received a 429 status code, too many same type requests, sleeping for {sleep_time}")
                     self.log(WARNING, f"The request was: {attributes}")
                     time.sleep(sleep_time)
@@ -278,5 +279,7 @@ class Crawler():
                         match_docs = self.match_details(match_list, region)
                         if match_docs:
                             self.db.insert_match_page(id, match_docs, page)
+            if is_last_page:
+                self.db.mark_as_crawled(id)
         self.log(INFO, 'Finished crawling, resetting rediti and starting again')
         self.db.reset_rediti()

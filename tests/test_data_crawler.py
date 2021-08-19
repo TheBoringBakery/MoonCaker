@@ -33,8 +33,10 @@ def crawler():
 
 # Used to check http errors
 class MockStatusCode:
-    def __init__(self, code):
+    def __init__(self, code, headers=None):
         self.status_code = code
+        if headers is not None:
+            self.headers = headers
 
 
 def raise_api_error(response):
@@ -60,7 +62,7 @@ def mock_entries_403_error(monkeypatch):
 def mock_entries_429_error(monkeypatch):
     monkeypatch.setattr(BaseApi, "raw_request",
                         lambda *_:
-                            raise_api_error(MockStatusCode(429)))
+                            raise_api_error(MockStatusCode(429, headers={"Retry-After": "10"})))
 
 
 @pytest.fixture
@@ -283,7 +285,7 @@ class TestMatchDetails:
     @pytest.fixture()
     def mock_timeline_succ(self, monkeypatch):
         monkeypatch.setattr(MatchApiV5, "timeline_by_match", self.timeline_by_id_succ)
-        
+
     @pytest.fixture()
     def mock_timeline_unsucc(self, monkeypatch):
         monkeypatch.setattr(MatchApiV5, "timeline_by_match", self.timeline_by_id_unsucc)
@@ -314,3 +316,31 @@ class TestMatchDetails:
         docs = crawler.match_details(self.match_ids, "euw1")
         assert len(docs) == 1
         assert docs[0]['_id'] == 3
+
+
+class TestCrawling:
+    marked_crawled = False
+
+    def mark_crawled(self, id):
+        self.marked_crawled = True
+
+    @pytest.fixture()
+    def mock_summoner_names_succ(self, monkeypatch):
+        monkeypatch.setattr(Crawler, "summoner_names", lambda *_: [])
+
+    @pytest.fixture()
+    def mock_summoner_names_unsucc(self, monkeypatch):
+        monkeypatch.setattr(Crawler, "summoner_names", lambda *_: None)
+
+    @pytest.fixture()
+    def mock_mark_crawled(self, monkeypatch):
+        monkeypatch.setattr(Database, "mark_as_crawled", self.mark_crawled)
+
+    def test_unsucc_crawled(self, crawler, mock_summoner_names_unsucc, mock_mark_crawled):
+        crawler.start_crawling()
+        assert not self.marked_crawled
+
+    def test_succ_crawled(self, crawler, mock_summoner_names_succ, mock_mark_crawled):
+        crawler.start_crawling()
+        assert self.marked_crawled
+
