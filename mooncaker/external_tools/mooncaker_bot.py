@@ -28,6 +28,7 @@ class MooncakerBot:
         self.set_api = set_api
         self.whitelist = whitelist
         self.WAITING_API = 0
+        self.WAITING_NUM_LINES = 0
 
     def send_new_api_reminder(self, chat_id) -> None:
         """
@@ -82,17 +83,18 @@ class MooncakerBot:
         query.answer()
         if query.data == '1':
             query.edit_message_text(
-                text=f"Available commands: \n /get_full_log \n /get_last_10_log \n /set_api_key \n /get_ReDiTi \n "
+                text=f"Available commands: \n /get_log \n /set_api_key \n /get_ReDiTi \n "
                      f"/get_count")
         else:
             query.edit_message_text(text=f"You are the best, onii-chan! I will always support you!")
 
-    def send_log(self, update: Update, context: CallbackContext, n_lines=0) -> None:
+    def send_log(self, update: Update, context: CallbackContext, n_lines=0):
         """
         Dispatcher for the commands which have to retrieve the log. Retrieves the whole log if the argument lines is
         None, otherwise it returns the last n_lines lines of the log.
         """
         log = get_log()
+        n_lines = int(update.message.text) if update.message.text.isnumeric() else 0
         with open("tmp.txt", "a") as log2send:
             log2send.writelines(log[-n_lines:])
         with open("tmp.txt", "r") as log2send:
@@ -100,6 +102,7 @@ class MooncakerBot:
                                       document=log2send,
                                       filename="mooncaker.log")
         remove("tmp.txt")
+        return ConversationHandler.END
 
     def set_api_key_req(self, update: Update, context: CallbackContext) -> int:
         """
@@ -145,13 +148,20 @@ class MooncakerBot:
         """
         update.message.reply_text(str(self.db.count_matches()))
 
-    def canc_key_wait(self, update: Update, context: CallbackContext):
+    def canc_wait(self, update: Update, context: CallbackContext):
         """
         Makes the set-api-key-dispatcher state machine stop waiting for an api key, terminating the state machine.
         """
         update.message.reply_sticker(self.NAME_TO_STICKER[self.MEGUMIN_THUMB_UP])
-        update.message.reply_text(f'Okidoki! Not waiting for key anymore!')
+        update.message.reply_text(f'Okidoki! Not waiting anymore!')
         return ConversationHandler.END
+
+    def ask_log_num(self, update: Update, context: CallbackContext):
+        """
+        Send a message asking to insert the desired number of lines wanted for the log
+        """
+        update.message.reply_text(f'How many lines of log would you like to have, senpai? Use /cancel to make me stop waiting')
+        return self.WAITING_NUM_LINES
 
     def start_bot(self) -> None:
         """
@@ -175,8 +185,20 @@ class MooncakerBot:
                                                       MessageHandler(Filters.text & ~Filters.command, part_set)
                                                   ]
                                               },
-                                              fallbacks=[CommandHandler('cancel', self.canc_key_wait)])
+                                              fallbacks=[CommandHandler('cancel', self.canc_wait)])
         dispatcher.add_handler(set_key_handler)
+        part = partial(self.authorize_and_dispatch, dispatcher=self.ask_log_num)
+        part_log = partial(self.authorize_and_dispatch, dispatcher=self.send_log)
+        get_log_handler = ConversationHandler(entry_points=[CommandHandler('get_log', part)],
+                                              states={
+                                                  self.WAITING_NUM_LINES: [
+                                                      MessageHandler(Filters.text & ~Filters.command, part_log)
+                                                  ]
+                                              },
+                                              fallbacks=[CommandHandler('cancel', self.canc_wait)])
+        dispatcher.add_handler(get_log_handler)
+
+
         part = partial(self.authorize_and_dispatch, dispatcher=self.get_ReDiTi)
         dispatcher.add_handler(CommandHandler("get_ReDiTi", part))
         part = partial(self.authorize_and_dispatch, dispatcher=self.get_count)

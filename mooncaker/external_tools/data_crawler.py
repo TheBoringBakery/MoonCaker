@@ -7,9 +7,12 @@ import time
 from functools import partial
 from logging import INFO, DEBUG, WARNING
 from riotwatcher import LolWatcher, ApiError
-from . import REGION2BIG_REGION, LOGGER_NAME
+from . import REGION2BIG_REGION
 from .db_interactor import Database
 from .logger import log as log_raw
+
+
+log = partial(log_raw, "datacrawler")
 # todo: add conccurent requests where possible to speed things up
 
 
@@ -23,7 +26,6 @@ class Crawler():
         self.db = Database(db_url)
         self.watcher = LolWatcher(API_KEY, default_match_v5=True)
         self.get_new_key = get_key_blocking
-        self.log = partial(log_raw, "datacrawler")
 
     def safe_api_call(self, attributes, args, retry_count=3):
         """calls the given command and checks for the successful outcome
@@ -40,7 +42,7 @@ class Crawler():
         Returns:
             (bool, Any | None): the outcome of the operation and the result, None if it was unsuccessful
         """
-        self.log(INFO, f"Calling {attributes} with args: {args}")
+        log(INFO, f"Calling {attributes} with args: {args}")
         result = None
         call_is_successful = False
         if retry_count > 0:
@@ -53,25 +55,25 @@ class Crawler():
                 call_is_successful = True
             except ApiError as err:
                 if err.response.status_code == 403:
-                    self.log(WARNING, "Received a 403 status code, waiting new API")
-                    self.log(DEBUG, "Going to possibly hang while waiting new api key")
+                    log(WARNING, "Received a 403 status code, waiting new API")
+                    log(DEBUG, "Going to possibly hang while waiting new api key")
                     new_key = self.get_new_key()
                     self.watcher = LolWatcher(new_key, default_match_v5=True)
-                    self.log(DEBUG, f"Received new api key ending with {new_key[-5:]}")
+                    log(DEBUG, f"Received new api key ending with {new_key[-5:]}")
                 elif err.response.status_code == 404:
-                    self.log(WARNING, "Received a 404 status code with the following arguments: ")
-                    self.log(WARNING, f"{args}")
-                    self.log(WARNING, f"While calling {attributes}")
+                    log(WARNING, "Received a 404 status code with the following arguments: ")
+                    log(WARNING, f"{args}")
+                    log(WARNING, f"While calling {attributes}")
                 elif err.response.status_code == 429:
                     sleep_time = err.response.headers.get("Retry-After")
                     sleep_time = 60 * (4 - retry_count) if sleep_time is None else int(sleep_time)
-                    self.log(WARNING, f"Received a 429 status code, too many same type requests, sleeping for {sleep_time}")
-                    self.log(WARNING, f"The request was: {attributes}")
+                    log(WARNING, f"Received a 429 status code, too many same type requests, sleeping for {sleep_time}")
+                    log(WARNING, f"The request was: {attributes}")
                     time.sleep(sleep_time)
                 else:
-                    self.log(WARNING, f"Received a {err.response.status_code} status code with the following arguments:")
-                    self.log(WARNING, f"{args}")
-                    self.log(WARNING, f"While calling {attributes}")
+                    log(WARNING, f"Received a {err.response.status_code} status code with the following arguments:")
+                    log(WARNING, f"{args}")
+                    log(WARNING, f"While calling {attributes}")
             if not call_is_successful:
                 return self.safe_api_call(attributes, args, retry_count - 1)
         return call_is_successful, result
@@ -151,7 +153,8 @@ class Crawler():
                                                           division,
                                                           page))
         if is_successful:
-            return [summoner.get('summonerName') for summoner in players_list]
+            names = [summoner.get('summonerName') for summoner in players_list]
+            return list(filter(lambda x: bool(x.strip()), names))  # filter empty names
         return None
 
     @staticmethod
@@ -257,15 +260,15 @@ class Crawler():
         for id, region, tier, division, page in self.db.ranks2crawl():
             is_last_page = False
             while not is_last_page:
-                self.log(INFO, f"Crawling {region}, {tier}, {division}, {page}")
+                log(INFO, f"Crawling {region}, {tier}, {division}, {page}")
                 names = self.summoner_names(region, tier, division, page)
                 if names is None:
                     # call is unsuccessful
-                    self.log(WARNING, f"Call to look up summoner names for {region}, {tier}, {division}, {page} was unsuccessful")
+                    log(WARNING, f"Call to look up summoner names for {region}, {tier}, {division}, {page} was unsuccessful")
                     break
                 elif len(names) == 0:
                     # No names on that page
-                    self.log(INFO, f"Crawled last page for {region}, {tier}, {division}, {page}")
+                    log(INFO, f"Crawled last page for {region}, {tier}, {division}, {page}")
                     is_last_page = True
                 else:
                     page += 1
@@ -281,5 +284,5 @@ class Crawler():
                             self.db.insert_match_page(id, match_docs, page)
             if is_last_page:
                 self.db.mark_as_crawled(id)
-        self.log(INFO, 'Finished crawling, resetting rediti and starting again')
+        log(INFO, 'Finished crawling, resetting rediti and starting again')
         self.db.reset_rediti()
