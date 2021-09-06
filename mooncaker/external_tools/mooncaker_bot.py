@@ -1,5 +1,5 @@
 from functools import partial
-from os import remove
+from os import getcwd, path, remove
 import requests
 from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, \
     InlineKeyboardMarkup
@@ -84,7 +84,7 @@ class MooncakerBot:
         if query.data == '1':
             query.edit_message_text(
                 text=f"Available commands: \n /get_log \n /set_api_key \n /get_ReDiTi \n "
-                     f"/get_count")
+                     f"/get_count \n /get_csv")
         else:
             query.edit_message_text(text=f"You are the best, onii-chan! I will always support you!")
 
@@ -103,6 +103,13 @@ class MooncakerBot:
                                       filename="mooncaker.log")
         remove("tmp.txt")
         return ConversationHandler.END
+
+    def get_csv(self, update: Update, context: CallbackContext):
+        self.db.create_matches_csv()
+        with open(path.join(getcwd(), 'matches.csv')) as matches_csv:
+            context.bot.send_document(chat_id=update.effective_chat.id,
+                                      document=matches_csv,
+                                      filename="matches.csv")
 
     def set_api_key_req(self, update: Update, context: CallbackContext) -> int:
         """
@@ -197,7 +204,8 @@ class MooncakerBot:
                                               },
                                               fallbacks=[CommandHandler('cancel', self.canc_wait)])
         dispatcher.add_handler(get_log_handler)
-
+        part= partial(self.authorize_and_dispatch,dispatcher=self.get_csv)
+        dispatcher.add_handler(CommandHandler("get_csv", part))
 
         part = partial(self.authorize_and_dispatch, dispatcher=self.get_ReDiTi)
         dispatcher.add_handler(CommandHandler("get_ReDiTi", part))
