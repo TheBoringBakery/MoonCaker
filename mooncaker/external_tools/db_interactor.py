@@ -108,7 +108,20 @@ class Database():
     def create_matches_csv(self, filename="matches.csv"):
         command_mongoexport = 'mongoexport --uri='\
             + self.db_url \
-            + f'/mooncaker --collection=matches --type=csv --fields=_id,region,duration,patch,winner,team1,team2 --out="{filename}"'
+            + '/mooncaker --collection=matches --type=csv --fields=' \
+            + '_id,region,duration,patch,winner,team1.teamId,' \
+            + 'team1.bans.0,team1.bans.1,team1.bans.2,team1.bans.3,' \
+            + 'team1.bans.4,team1.TOP.summonerId,team1.TOP.champion,' \
+            + 'team1.JUNGLE.summonerId,team1.JUNGLE.champion,' \
+            + 'team1.MID.summonerId,team1.MID.champion,team1.ADC.summonerId' \
+            + ',team1.ADC.champion,team1.SUPPORT.summonerId,' \
+            + 'team1.SUPPORT.champion,team2.teamId,team2.bans.0,' \
+            + 'team2.bans.1,team2.bans.2,team2.bans.3,team2.bans.4,' \
+            + 'team2.TOP.summonerId,team2.TOP.champion,' \
+            + 'team2.JUNGLE.summonerId,team2.JUNGLE.champion,' \
+            + 'team2.MID.summonerId,team2.MID.champion,team2.ADC.summonerId' \
+            + ',team2.ADC.champion,team2.SUPPORT.summonerId,' \
+            + f'team2.SUPPORT.champion --out="{filename}"'
         os.system(f'rm "{filename}"')
         os.system(command_mongoexport)
         return os.path.join(os.getcwd(), filename)
