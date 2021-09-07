@@ -1,13 +1,14 @@
 from functools import partial
 import hashlib
 from logging import WARNING, INFO, DEBUG
-from flask import redirect, session, render_template, url_for, g, request
+from flask import redirect, session, render_template, url_for, g, request, send_file
 from flask_restful import Resource
 from flask_mail import Message
 from flask_app.forms import AdminForm, ConsoleForm
 from flask_app import app, mail, api_key_queue
 from mooncaker.external_tools.logger import log as log_raw
 from mooncaker.external_tools.logger import get_log
+from mooncaker.external_tools.db_interactor import Database
 
 log = partial(log_raw, "mooncaker")
 
@@ -74,7 +75,9 @@ def admin():
         session.pop('user', None)
         if form.username.data == app.config['ADMIN_USER']:
             unhashed_password = form.password.data
-            hashed_password = hashlib.pbkdf2_hmac('sha256', unhashed_password.encode('utf-8'), app.config['SALT'], 100000)
+            hashed_password = hashlib.pbkdf2_hmac('sha256',
+                                                  unhashed_password.encode('utf-8'),
+                                                  app.config['SALT'], 100000)
             if hashed_password == app.config['ADMIN_PASS']:
                 session['user'] = form.username.data
                 return redirect(url_for('console'))
@@ -94,9 +97,19 @@ def parse_command(command, args):
         return 'New API key set correctly'
     elif command == "get-log":
         return "<br>".join(get_log())
+    elif command == "get-data":
+        return f'You can download the file <a href="{url_for("download_data")}" target="_blank" rel="noopener noreferrer">here</a>'
     elif command == "help":
-        return "Currently available commands are: <br> set-api-key [key] <br> get-log <br>"
+        return "Currently available commands are: <br> set-api-key [key] <br> get-log <br> get-data <br>"
     return 'Something when wrong parsing your command. Please report to the admins'
+
+
+@app.route("/data")
+def download_data():
+    if g.user is not None:
+        matches_filename = Database(app.config['DB_URL']).create_matches_csv()
+        return send_file(matches_filename, as_attachment=True)
+    return redirect(url_for('admin'))
 
 
 @app.route('/console/', methods=['GET', 'POST'])

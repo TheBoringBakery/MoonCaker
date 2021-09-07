@@ -21,7 +21,7 @@ class Database():
             self.db = MongoClient(db_url, connect=False).get_database("mooncaker")
             self.db_matches = self.db.get_collection("matches")
             self.db_rediti = self.db.get_collection("ReDiTi")
-            
+
             self.set_rediti()
             self.to_crawl = [elem for elem in self.db_rediti.find({'crawled': False})]
             if not self.to_crawl:
@@ -105,7 +105,10 @@ class Database():
     def get_rediti(self):
         return self.db_rediti.find({}, {'_id': 0})
 
-    def create_matches_csv(self):
-        command_mongoexport = 'mongoexport --uri=' + self.db_url + '/mooncaker --collection=matches --type=csv --fields=_id,region,duration,patch,winner,team1,team2 --out=matches.csv' 
-        os.system('rm matches.csv')
+    def create_matches_csv(self, filename="matches.csv"):
+        command_mongoexport = 'mongoexport --uri='\
+            + self.db_url \
+            + f'/mooncaker --collection=matches --type=csv --fields=_id,region,duration,patch,winner,team1,team2 --out="{filename}"'
+        os.system(f'rm "{filename}"')
         os.system(command_mongoexport)
+        return os.path.join(os.getcwd(), filename)

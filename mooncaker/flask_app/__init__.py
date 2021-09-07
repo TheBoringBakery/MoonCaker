@@ -21,7 +21,7 @@ log(INFO, 'Server has started from main')
 
 # load environment variables from file .env
 load_dotenv()
-app.config['MAIL_PORT'] = 587
+app.config['MAIL_PORT'] = 587  # todo: should be moved inside .env
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 if 'testing' in environ:
@@ -37,6 +37,7 @@ try:
     app.config['ADMIN_PASS'] = environ['admin-hashed-pass'].encode('latin1') \
                                                            .decode('unicode-escape') \
                                                            .encode('latin1')
+    app.config['DB_URL'] = environ['db-url']
     app.config['TELEGRAM_TOKEN'] = environ['telegram-token']
     app.config['TELEGRAM_WHITELIST'] = environ['telegram-whitelist']
     app.config['TELEGRAM_REMINDER_CHAT_ID'] = environ['telegram-reminder-chat-id']
@@ -51,7 +52,8 @@ api_key_queue = Queue()  # Where the new API key will be put
 
 bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],
                    api_key_queue.put,
-                   app.config['TELEGRAM_WHITELIST'])
+                   app.config['TELEGRAM_WHITELIST'],
+                   app.config['DB_URL'])
 
 bot_process = Process(target=bot.start_bot)
 bot_process.start()
@@ -80,7 +82,7 @@ def get_api_key():
     return api_key_queue.get()
 
 
-crawler = Crawler("NotAnAPIKey", get_api_key)
+crawler = Crawler("NotAnAPIKey", get_api_key, app.config['DB_URL'])
 crawling_process = Process(target=crawler.start_crawling)
 crawling_process.start()
 log(INFO, "Starting datacrawling")

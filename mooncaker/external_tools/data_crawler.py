@@ -21,7 +21,7 @@ class Crawler():
     def __init__(self,
                  API_KEY,
                  get_key_blocking,
-                 db_url="mongodb://datacaker:27017"):
+                 db_url):
 
         self.db = Database(db_url)
         self.watcher = LolWatcher(API_KEY, default_match_v5=True)

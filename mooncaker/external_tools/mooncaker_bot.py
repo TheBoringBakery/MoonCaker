@@ -17,7 +17,7 @@ class MooncakerBot:
     NAME_TO_STICKER = {name: Sticker(name, name, 512, 512, False) for name in
                        [SAD_ZOE, MEGUMIN_THUMB_UP, PARTY_GIRL, LOLI]}
 
-    def __init__(self, token, set_api, whitelist, db_url="mongodb://datacaker:27017"):
+    def __init__(self, token, set_api, whitelist, db_url):
         """
             Initializes the bot, stores the telegram token, connects to the
             database and saves the url of the log and
@@ -105,8 +105,8 @@ class MooncakerBot:
         return ConversationHandler.END
 
     def get_csv(self, update: Update, context: CallbackContext):
-        self.db.create_matches_csv()
-        with open(path.join(getcwd(), 'matches.csv')) as matches_csv:
+        matches_filename = self.db.create_matches_csv()
+        with open(matches_filename) as matches_csv:
             context.bot.send_document(chat_id=update.effective_chat.id,
                                       document=matches_csv,
                                       filename="matches.csv")
@@ -204,7 +204,7 @@ class MooncakerBot:
                                               },
                                               fallbacks=[CommandHandler('cancel', self.canc_wait)])
         dispatcher.add_handler(get_log_handler)
-        part= partial(self.authorize_and_dispatch,dispatcher=self.get_csv)
+        part = partial(self.authorize_and_dispatch, dispatcher=self.get_csv)
         dispatcher.add_handler(CommandHandler("get_csv", part))
 
         part = partial(self.authorize_and_dispatch, dispatcher=self.get_ReDiTi)
