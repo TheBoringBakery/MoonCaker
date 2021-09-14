@@ -121,7 +121,7 @@ class MooncakerBot:
             tmp_file = tmp.read()
             file_id = tmp_file.split("file_id ", 1)[1].strip().replace(')', '')
         os.system('rm tmp.txt')
-        if update.effective_user != self.client_user:
+        if update.effective_user.username != self.client_user:
             context.bot.send_document(chat_id=update.effective_chat.id, document=file_id)
 
     def set_api_key_req(self, update: Update, context: CallbackContext) -> int:
