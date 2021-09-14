@@ -11,3 +11,4 @@ WTForms==2.3.3
 flask_talisman==0.8.0
 python-telegram-bot==13.7
 mongomock==3.23.0
+telegram-upload==0.4.0

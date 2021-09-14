@@ -1,5 +1,6 @@
 from functools import partial
 from os import getcwd, path, remove
+import os
 import requests
 from telegram import Update, ForceReply, Sticker, InlineKeyboardButton, \
     InlineKeyboardMarkup
@@ -17,7 +18,7 @@ class MooncakerBot:
     NAME_TO_STICKER = {name: Sticker(name, name, 512, 512, False) for name in
                        [SAD_ZOE, MEGUMIN_THUMB_UP, PARTY_GIRL, LOLI]}
 
-    def __init__(self, token, set_api, whitelist, db_url):
+    def __init__(self, token, set_api, whitelist, db_url, reminder_chat_id, client_user):
         """
             Initializes the bot, stores the telegram token, connects to the
             database and saves the url of the log and
@@ -29,8 +30,10 @@ class MooncakerBot:
         self.whitelist = whitelist
         self.WAITING_API = 0
         self.WAITING_NUM_LINES = 0
+        self.reminder_chat_id = reminder_chat_id
+        self.client_user = client_user
 
-    def send_new_api_reminder(self, chat_id) -> None:
+    def send_new_api_reminder(self) -> None:
         """
             sends to admins a reminder for the insertion of a new api key
 
@@ -39,7 +42,7 @@ class MooncakerBot:
                          should be sent
         """
         params = {
-            'chat_id': chat_id,
+            'chat_id': self.reminder_chat_id,
             'text': 'Senpai, I need a new api key :('
         }
         url = "https://api.telegram.org/bot" + self.token + "/sendMessage"
@@ -101,15 +104,24 @@ class MooncakerBot:
             context.bot.send_document(chat_id=update.effective_chat.id,
                                       document=log2send,
                                       filename="mooncaker.log")
-        remove("tmp.txt")
+        os.system('rm tmp.txt')
         return ConversationHandler.END
 
     def get_csv(self, update: Update, context: CallbackContext):
+        """
+        Generates and sends csv file for matches collection. Since telegram bots are limited to sending at most 
+        50 MB files, the file is first sent by a Client (not bot instance) of Telegram to the bot, then sent by 
+        their file_id in the Telegram server to the requiring user, except the case of the requiring user being
+        the user which is used for the Client instance. 
+        """
         matches_filename = self.db.create_matches_csv()
-        with open(matches_filename) as matches_csv:
-            context.bot.send_document(chat_id=update.effective_chat.id,
-                                      document=matches_csv,
-                                      filename="matches.csv")
+        os.system(f'telegram-upload --to Mooncaker_bot --print-file-id "{matches_filename}" > tmp.txt')
+        with open('tmp.txt') as tmp:
+            tmp_file = tmp.read()
+            file_id = tmp_file.split("file_id ", 1)[1].strip().replace(')', '')
+        os.system('rm tmp.txt')
+        if update.effective_user != self.client_user:
+            context.bot.send_document(chat_id=update.effective_chat.id, document=file_id)
 
     def set_api_key_req(self, update: Update, context: CallbackContext) -> int:
         """

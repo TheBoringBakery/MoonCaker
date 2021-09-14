@@ -41,6 +41,7 @@ try:
     app.config['TELEGRAM_TOKEN'] = environ['telegram-token']
     app.config['TELEGRAM_WHITELIST'] = environ['telegram-whitelist']
     app.config['TELEGRAM_REMINDER_CHAT_ID'] = environ['telegram-reminder-chat-id']
+    app.config['TELEGRAM_CLIENT_USER'] = environ['telegram-client-user']
 except KeyError:
     print("The .env file was improperly set, please check the README for further information")
     exit()
@@ -53,7 +54,9 @@ api_key_queue = Queue()  # Where the new API key will be put
 bot = MooncakerBot(app.config['TELEGRAM_TOKEN'],
                    api_key_queue.put,
                    app.config['TELEGRAM_WHITELIST'],
-                   app.config['DB_URL'])
+                   app.config['DB_URL'],
+                   app.config['TELEGRAM_REMINDER_CHAT_ID'],
+                   app.config['TELEGRAM_CLIENT_USER'])
 
 bot_process = Process(target=bot.start_bot)
 bot_process.start()
@@ -77,7 +80,7 @@ def get_api_key():
                       recipients=app.config['MAIL_RECIPIENTS'])
         mail.send(msg)
     log(INFO, "Signal email sent")
-    bot.send_new_api_reminder(app.config['TELEGRAM_REMINDER_CHAT_ID'])
+    bot.send_new_api_reminder()
     log(INFO, "Signal telegram message sent")
     return api_key_queue.get()
 
