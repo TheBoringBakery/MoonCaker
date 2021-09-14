@@ -115,6 +115,7 @@ class MooncakerBot:
         the user which is used for the Client instance. 
         """
         matches_filename = self.db.create_matches_csv()
+        update.message.reply_text("Oki! sending you the csv! \n It may take a while, so hang on please! \n File size is: " + str(round(os.stat(matches_filename).st_size/(1024**2), 2)) + " MB")
         os.system(f'telegram-upload --to Mooncaker_bot --print-file-id "{matches_filename}" > tmp.txt')
         with open('tmp.txt') as tmp:
             tmp_file = tmp.read()
